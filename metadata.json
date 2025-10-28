@@ -1,0 +1,5 @@
+{
+  "name": "Net Worth & FIRE Tracker",
+  "description": "A dashboard to track your assets, liabilities, net worth, and progress towards Financial Independence, Retire Early (FIRE). It includes simulated live price feeds for investments and AI-powered financial insights.",
+  "requestFramePermissions": []
+}

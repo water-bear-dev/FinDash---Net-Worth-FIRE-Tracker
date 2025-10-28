@@ -1,0 +1,18 @@
+import React from 'react';
+
+interface CardProps {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}
+
+const Card: React.FC<CardProps> = ({ title, children, className = '' }) => {
+  return (
+    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 ${className}`}>
+      <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">{title}</h2>
+      {children}
+    </div>
+  );
+};
+
+export default Card;
