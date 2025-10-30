@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { CashAccount, Investment, Property, Liability } from '../types';
+// FIX: Import AssetCategory to be used for default values.
+import { CashAccount, Investment, Property, Liability, AssetCategory } from '../types';
 import Card from './Card';
 
 type Item = CashAccount | Investment | Property | Liability;
@@ -96,7 +97,8 @@ const ManageData: React.FC<ManageDataProps> = (props) => {
                 );
             case 'Investments':
                 return (
-                     <form onSubmit={(e) => { e.preventDefault(); props.addInvestment({ ticker: invTicker.toUpperCase(), quantity: parseFloat(invQty), costBasisPerUnit: parseFloat(invCost) }); setInvTicker(''); setInvQty(''); setInvCost(''); }} className="grid grid-cols-1 md:grid-cols-4 gap-2 p-4 bg-gray-700/50 rounded-lg">
+                     // FIX: Add missing 'currentValue' and 'category' properties.
+                     <form onSubmit={(e) => { e.preventDefault(); props.addInvestment({ ticker: invTicker.toUpperCase(), quantity: parseFloat(invQty), costBasisPerUnit: parseFloat(invCost), category: AssetCategory.Stock, currentValue: parseFloat(invQty) * parseFloat(invCost) }); setInvTicker(''); setInvQty(''); setInvCost(''); }} className="grid grid-cols-1 md:grid-cols-4 gap-2 p-4 bg-gray-700/50 rounded-lg">
                         <input type="text" placeholder="Ticker" value={invTicker} onChange={e => setInvTicker(e.target.value)} required className="input-field" />
                         <input type="number" placeholder="Quantity" value={invQty} onChange={e => setInvQty(e.target.value)} required className="input-field" />
                         <input type="number" placeholder="Cost Basis / Unit" value={invCost} onChange={e => setInvCost(e.target.value)} required className="input-field" />
@@ -105,7 +107,8 @@ const ManageData: React.FC<ManageDataProps> = (props) => {
                 );
              case 'Properties':
                 return (
-                    <form onSubmit={(e) => { e.preventDefault(); props.addProperty({ name: propName, currentValue: parseFloat(propValue) }); setPropName(''); setPropValue(''); }} className="grid grid-cols-1 md:grid-cols-3 gap-2 p-4 bg-gray-700/50 rounded-lg">
+                    // FIX: Add missing 'category' property.
+                    <form onSubmit={(e) => { e.preventDefault(); props.addProperty({ name: propName, currentValue: parseFloat(propValue), category: AssetCategory.Property }); setPropName(''); setPropValue(''); }} className="grid grid-cols-1 md:grid-cols-3 gap-2 p-4 bg-gray-700/50 rounded-lg">
                         <input type="text" placeholder="Property Name" value={propName} onChange={e => setPropName(e.target.value)} required className="input-field" />
                         <input type="number" placeholder="Current Value" value={propValue} onChange={e => setPropValue(e.target.value)} required className="input-field" />
                         <button type="submit" className="btn-primary">Add Property</button>

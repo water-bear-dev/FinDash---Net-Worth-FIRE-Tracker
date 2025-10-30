@@ -18,6 +18,75 @@ import moment from 'moment';
 import { generateRecurringEvents } from './services/eventGenerator';
 import { v4 as uuidv4 } from 'uuid';
 
+// --- SAMPLE DATA ---
+
+const sampleCashAccounts: CashAccount[] = [
+  { id: 'c1', name: 'Main Checking Account', balance: 25480.50 },
+  { id: 'c2', name: 'High-Yield Savings', balance: 50210.11 },
+];
+
+const sampleProperties: Property[] = [
+  { id: 'p1', name: 'Primary Residence', currentValue: 850000, category: AssetCategory.Property },
+];
+
+const sampleLiabilities: Liability[] = [
+  { id: 'l1', name: 'Mortgage', outstandingBalance: 425000, interestRate: 3.25 },
+  { id: 'l2', name: 'Car Loan', outstandingBalance: 15200, interestRate: 5.1 },
+];
+
+const sampleTransactions: Transaction[] = [
+  { id: 't1', ticker: 'VOO', category: AssetCategory.ETF, type: 'buy', date: '2022-05-10', quantity: 20, pricePerUnit: 380.50 },
+  { id: 't2', ticker: 'AAPL', category: AssetCategory.Stock, type: 'buy', date: '2022-06-15', quantity: 50, pricePerUnit: 140.20 },
+  { id: 't3', ticker: 'MSFT', category: AssetCategory.Stock, type: 'buy', date: '2023-01-20', quantity: 30, pricePerUnit: 240.00 },
+  { id: 't4', ticker: 'VOO', category: AssetCategory.ETF, type: 'buy', date: '2023-03-12', quantity: 15, pricePerUnit: 360.75 },
+  { id: 't5', ticker: 'NVDA', category: AssetCategory.Stock, type: 'buy', date: '2023-09-01', quantity: 10, pricePerUnit: 485.00 },
+  { id: 't6', ticker: 'AAPL', category: AssetCategory.Stock, type: 'sell', date: '2024-02-28', quantity: 10, pricePerUnit: 180.00 },
+  // NOTE: Crypto price fetching is not fully implemented in marketDataService, so this may not show a live value.
+  { id: 't7', ticker: 'ETH-USD', category: AssetCategory.Crypto, type: 'buy', date: '2023-11-15', quantity: 2, pricePerUnit: 2000 },
+];
+
+const sampleDividends: Dividend[] = [
+  { id: 'd1', ticker: 'VOO', date: '2024-03-20', amount: 55.30 },
+  { id: 'd2', ticker: 'AAPL', date: '2024-05-15', amount: 9.60 },
+  { id: 'd3', ticker: 'MSFT', date: '2024-05-20', amount: 21.60 },
+];
+
+const sampleBudgetItems: BudgetItem[] = [
+  {
+    id: 'b1', name: 'Monthly Salary', category: 'Salary', amount: 7500, type: 'income', date: '2024-01-05', isRecurring: true,
+    recurringSettings: { frequency: 'monthly', endCondition: 'never' },
+  },
+  {
+    id: 'b2', name: 'Consulting Gig', category: 'Side Job', amount: 1200, type: 'income', date: '2024-05-15', isRecurring: false,
+  },
+  {
+    id: 'b3', name: 'Mortgage Payment', category: 'Rent/Mortgage', amount: 2200, type: 'expense', date: '2024-01-01', isRecurring: true,
+    recurringSettings: { frequency: 'monthly', endCondition: 'liability', endLiabilityId: 'l1' },
+  },
+   {
+    id: 'b4', name: 'Car Payment', category: 'Car Payment/Lease', amount: 450, type: 'expense', date: '2024-01-15', isRecurring: true,
+    recurringSettings: { frequency: 'monthly', endCondition: 'liability', endLiabilityId: 'l2' },
+  },
+  {
+    id: 'b5', name: 'Groceries', category: 'Groceries & Food Staples', amount: 800, type: 'expense', date: '2024-01-07', isRecurring: true,
+    recurringSettings: { frequency: 'monthly', endCondition: 'never' },
+  },
+  {
+    id: 'b6', name: 'Utilities', category: 'Electricity, Gas, Water', amount: 250, type: 'expense', date: '2024-01-10', isRecurring: true,
+    recurringSettings: { frequency: 'monthly', endCondition: 'never' },
+  },
+  {
+    id: 'b7', name: 'Internet', category: 'Internet, Phone, Cable', amount: 80, type: 'expense', date: '2024-01-18', isRecurring: true,
+    recurringSettings: { frequency: 'monthly', endCondition: 'never' },
+  },
+  {
+    id: 'b8', name: 'Investment Contribution', category: 'Investment Contributions (Non-Retirement)', amount: 1500, type: 'expense', date: '2024-01-05', isRecurring: true,
+    recurringSettings: { frequency: 'monthly', endCondition: 'never' },
+  },
+];
+
+const sampleUserProfile: UserProfile = { name: 'Alex Doe', email: 'alex.doe@example.com' };
+
 // A simple hook for using localStorage
 function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
     const [storedValue, setStoredValue] = useState<T>(() => {
@@ -45,15 +114,15 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val
 
 const App: React.FC = () => {
     // State management using custom hook
-    const [cashAccounts, setCashAccounts] = useLocalStorage<CashAccount[]>('cashAccounts', []);
-    const [properties, setProperties] = useLocalStorage<Property[]>('properties', []);
-    const [liabilities, setLiabilities] = useLocalStorage<Liability[]>('liabilities', []);
-    const [transactions, setTransactions] = useLocalStorage<Transaction[]>('transactions', []);
-    const [dividends, setDividends] = useLocalStorage<Dividend[]>('dividends', []);
-    const [budgetItems, setBudgetItems] = useLocalStorage<BudgetItem[]>('budgetItems', []);
-    const [userProfile, setUserProfile] = useLocalStorage<UserProfile>('userProfile', { name: 'User', email: '' });
+    const [cashAccounts, setCashAccounts] = useLocalStorage<CashAccount[]>('cashAccounts', sampleCashAccounts);
+    const [properties, setProperties] = useLocalStorage<Property[]>('properties', sampleProperties);
+    const [liabilities, setLiabilities] = useLocalStorage<Liability[]>('liabilities', sampleLiabilities);
+    const [transactions, setTransactions] = useLocalStorage<Transaction[]>('transactions', sampleTransactions);
+    const [dividends, setDividends] = useLocalStorage<Dividend[]>('dividends', sampleDividends);
+    const [budgetItems, setBudgetItems] = useLocalStorage<BudgetItem[]>('budgetItems', sampleBudgetItems);
+    const [userProfile, setUserProfile] = useLocalStorage<UserProfile>('userProfile', sampleUserProfile);
     const [fmpApiKey, setFmpApiKey] = useLocalStorage<string>('fmpApiKey', '');
-    const [targetAnnualSpending, setTargetAnnualSpending] = useLocalStorage<number>('targetAnnualSpending', 50000);
+    const [targetAnnualSpending, setTargetAnnualSpending] = useLocalStorage<number>('targetAnnualSpending', 60000);
     const [currency, setCurrency] = useLocalStorage<string>('currency', 'USD');
     const [theme, setTheme] = useLocalStorage<string>('theme', 'dark');
 
@@ -261,6 +330,7 @@ const App: React.FC = () => {
                                     transactions={transactions}
                                     dividends={dividends}
                                     formatCurrency={formatCurrency}
+                                    updateBudgetItem={(item) => addOrUpdate(setBudgetItems, item)}
                                 />
                             } />
                             <Route path="/settings" element={

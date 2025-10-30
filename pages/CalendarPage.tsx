@@ -1,11 +1,9 @@
-
-
-import React, { useState, useMemo } from 'react';
-import moment from 'moment';
-import { BudgetItem, Liability, Transaction, Dividend, FinancialEvent } from '../types';
-import Card from '../components/Card';
+import React, { useState, useMemo, useCallback } from 'react';
+import moment, { Moment } from 'moment';
+import { BudgetItem, Dividend, Liability, Transaction } from '../types';
 import { generateRecurringEvents } from '../services/eventGenerator';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import BudgetItemModal from '../components/BudgetItemModal';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 
 interface CalendarPageProps {
     budgetItems: BudgetItem[];
@@ -13,200 +11,283 @@ interface CalendarPageProps {
     transactions: Transaction[];
     dividends: Dividend[];
     formatCurrency: (value: number) => string;
+    updateBudgetItem: (item: BudgetItem) => void;
 }
 
-const CalendarPage: React.FC<CalendarPageProps> = ({ budgetItems, liabilities, transactions, dividends, formatCurrency }) => {
+type CalendarEvent = {
+    id: string;
+    title: string;
+    start: Date;
+    amount: number;
+    type: 'income' | 'expense' | 'transaction' | 'dividend';
+    originalItem: BudgetItem | Transaction | Dividend;
+};
+
+type View = 'month' | 'week' | 'day';
+
+const CalendarPage: React.FC<CalendarPageProps> = (props) => {
+    const { budgetItems, liabilities, transactions, dividends, formatCurrency, updateBudgetItem } = props;
+
     const [currentDate, setCurrentDate] = useState(moment());
-    const [forecastSettings, setForecastSettings] = useState({
-        liabilityId: '',
-        repaymentValue: '500',
-        repaymentFrequency: 'monthly' as 'weekly' | 'fortnightly' | 'monthly'
-    });
+    const [view, setView] = useState<View>('month');
+    const [hoveredEvent, setHoveredEvent] = useState<{ event: CalendarEvent; position: { x: number; y: number } } | null>(null);
+    const [editingItem, setEditingItem] = useState<BudgetItem | null>(null);
 
-    const financialEvents = useMemo<FinancialEvent[]>(() => {
-        const start = currentDate.clone().startOf('month').startOf('week').toDate();
-        const end = currentDate.clone().endOf('month').endOf('week').toDate();
-        
-        // FIX: Update budgetEvents to match FinancialEvent interface
-        const budgetEvents: FinancialEvent[] = generateRecurringEvents(budgetItems, liabilities, start, end).map(item => ({
-            id: item.id,
-            title: `${item.type === 'income' ? '+' : '-'} ${formatCurrency(item.amount)}: ${item.name}`,
-            start: moment(item.date).toDate(),
-            end: moment(item.date).toDate(),
-            allDay: true,
-            resource: {
-                type: item.type
-            }
-        }));
+    const { calendarEvents, viewRange } = useMemo(() => {
+        const start = moment(currentDate).startOf(view);
+        const end = moment(currentDate).endOf(view);
 
-        // FIX: Update transactionEvents to match FinancialEvent interface
-        const transactionEvents: FinancialEvent[] = transactions
-            .filter(t => moment(t.date).isBetween(start, end, undefined, '[]'))
-            .map(t => ({
-                id: t.id,
-                title: `${t.type.toUpperCase()} ${t.ticker}`,
-                start: moment(t.date).toDate(),
-                end: moment(t.date).toDate(),
-                allDay: true,
-                resource: {
-                    type: 'transaction'
-                }
-            }));
-        
-        // FIX: Update dividendEvents to match FinancialEvent interface
-        const dividendEvents: FinancialEvent[] = dividends
-            .filter(d => moment(d.date).isBetween(start, end, undefined, '[]'))
-            .map(d => ({
-                id: d.id,
-                title: `Div: ${d.ticker} ${formatCurrency(d.amount)}`,
-                start: moment(d.date).toDate(),
-                end: moment(d.date).toDate(),
-                allDay: true,
-                resource: {
-                    type: 'dividend'
-                }
-            }));
+        // For month view, we need to pad the start/end to full weeks for the grid
+        const viewStart = view === 'month' ? start.clone().startOf('week') : start;
+        const viewEnd = view === 'month' ? end.clone().endOf('week') : end;
 
-        return [...budgetEvents, ...transactionEvents, ...dividendEvents];
-      }, [currentDate, budgetItems, transactions, dividends, liabilities, formatCurrency]);
+        const recurringBudgetEvents = generateRecurringEvents(budgetItems, liabilities, viewStart.toDate(), viewEnd.toDate());
 
-    const loanForecastData = useMemo(() => {
-        const { liabilityId, repaymentValue, repaymentFrequency } = forecastSettings;
-        if (!liabilityId) return [];
+        const allEvents: CalendarEvent[] = [];
 
-        const selectedLiability = liabilities.find(l => l.id === liabilityId);
-        if (!selectedLiability || !repaymentValue || parseFloat(repaymentValue) <= 0) return [];
-
-        const data = [];
-        let currentBalance = selectedLiability.outstandingBalance;
-        let currentDate = moment();
-        const paymentAmount = parseFloat(repaymentValue);
-
-        for (let i = 0; i < 60; i++) { // Forecast for 5 years
-            data.push({
-                date: currentDate.format('MMM YYYY'),
-                balance: Math.max(0, currentBalance),
+        recurringBudgetEvents.forEach(item => {
+            allEvents.push({
+                id: item.id,
+                title: item.name,
+                start: moment(item.date).toDate(),
+                amount: item.amount,
+                type: item.type,
+                originalItem: item,
             });
-            if (currentBalance <= 0) break;
+        });
 
-            const monthlyInterest = currentBalance * (selectedLiability.interestRate / 100 / 12);
-            currentBalance += monthlyInterest;
-            
-            if (repaymentFrequency === 'monthly') {
-                currentBalance -= paymentAmount;
-            } else if (repaymentFrequency === 'fortnightly') {
-                currentBalance -= paymentAmount * 2; // Simplified
-            } else if (repaymentFrequency === 'weekly') {
-                currentBalance -= paymentAmount * 4; // Simplified
+        transactions.forEach(t => {
+            const tDate = moment(t.date);
+            if (tDate.isBetween(viewStart, viewEnd, undefined, '[]')) {
+                allEvents.push({
+                    id: t.id,
+                    title: `${t.type.toUpperCase()} ${t.ticker}`,
+                    start: tDate.toDate(),
+                    amount: t.quantity * t.pricePerUnit,
+                    type: 'transaction',
+                    originalItem: t,
+                });
             }
-            
-            currentDate.add(1, 'month');
-        }
+        });
 
-        return data;
-    }, [forecastSettings, liabilities]);
+        dividends.forEach(d => {
+            const dDate = moment(d.date);
+            if (dDate.isBetween(viewStart, viewEnd, undefined, '[]')) {
+                 allEvents.push({
+                    id: d.id,
+                    title: `Dividend: ${d.ticker}`,
+                    start: dDate.toDate(),
+                    amount: d.amount,
+                    type: 'dividend',
+                    originalItem: d,
+                });
+            }
+        });
+        
+        return { 
+            calendarEvents: allEvents.sort((a, b) => a.start.getTime() - b.start.getTime()),
+            viewRange: { start: viewStart, end: viewEnd }
+        };
 
-    const startOfMonth = currentDate.clone().startOf('month');
-    const endOfMonth = currentDate.clone().endOf('month');
-    const startOfWeek = startOfMonth.clone().startOf('week');
-
-    const calendarDays = [];
-    let day = startOfWeek.clone();
-    while (calendarDays.length < 42) { // Ensure 6 weeks are always rendered
-        calendarDays.push(day.clone());
-        day.add(1, 'day');
-    }
-
-    const getEventsForDay = (date: moment.Moment) => {
-        return financialEvents.filter(event => moment(event.start).isSame(date, 'day'));
-    };
-
-    // FIX: Update function signature to use resource.type
-    const getEventTypeColor = (type: FinancialEvent['resource']['type']) => {
-        switch (type) {
-            case 'income': return 'bg-green-500/80 dark:bg-green-600/80';
-            case 'expense': return 'bg-red-500/80 dark:bg-red-600/80';
-            case 'dividend': return 'bg-blue-500/80 dark:bg-blue-600/80';
-            case 'transaction': return 'bg-indigo-500/80 dark:bg-indigo-600/80';
-            default: return 'bg-gray-500/80 dark:bg-gray-600/80';
-        }
-    };
+    }, [currentDate, view, budgetItems, liabilities, transactions, dividends]);
     
-    const inputClasses = "block w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-indigo-500 dark:focus:border-indigo-500";
-    const btnSecondaryClasses = "w-full sm:w-auto text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700 transition-colors";
+    const handlePrev = useCallback(() => setCurrentDate(prev => prev.clone().subtract(1, view)), [view]);
+    const handleNext = useCallback(() => setCurrentDate(prev => prev.clone().add(1, view)), [view]);
+    const handleToday = useCallback(() => setCurrentDate(moment()), []);
 
+    const handleEventMouseEnter = (event: CalendarEvent, domEvent: React.MouseEvent) => {
+        setHoveredEvent({ event, position: { x: domEvent.clientX, y: domEvent.clientY } });
+    };
+    const handleEventMouseLeave = () => setHoveredEvent(null);
+
+    const handleEventClick = (event: CalendarEvent) => {
+        if (event.type === 'income' || event.type === 'expense') {
+             const originalId = (event.originalItem as BudgetItem).id.split('-')[0];
+             const originalBudgetItem = budgetItems.find(item => item.id === originalId);
+             if (originalBudgetItem) {
+                 setEditingItem(originalBudgetItem);
+             }
+        }
+    };
+
+    const handleModalSave = (item: BudgetItem | Omit<BudgetItem, 'id'>) => {
+        if ('id' in item) {
+            updateBudgetItem(item);
+        }
+        setEditingItem(null);
+    };
+
+    const getEventColor = (type: CalendarEvent['type']) => ({
+        'income': 'bg-green-600 hover:bg-green-500',
+        'expense': 'bg-red-600 hover:bg-red-500',
+        'transaction': 'bg-blue-600 hover:bg-blue-500',
+        'dividend': 'bg-purple-600 hover:bg-purple-500',
+    }[type]);
+
+    const renderHeader = () => {
+        let title = '';
+        if (view === 'month') title = currentDate.format('MMMM YYYY');
+        else if (view === 'week') {
+            const startOfWeek = currentDate.clone().startOf('week');
+            const endOfWeek = currentDate.clone().endOf('week');
+            title = `${startOfWeek.format('MMM D')} - ${endOfWeek.format('D, YYYY')}`;
+        } else title = currentDate.format('dddd, MMMM D, YYYY');
+
+        return (
+            <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-2">
+                    <button onClick={handlePrev} className="p-2 rounded-full hover:bg-gray-700"><ChevronLeftIcon className="h-5 w-5"/></button>
+                    <button onClick={handleNext} className="p-2 rounded-full hover:bg-gray-700"><ChevronRightIcon className="h-5 w-5"/></button>
+                    <button onClick={handleToday} className="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-700 hover:bg-gray-600">Today</button>
+                    <h2 className="text-xl font-bold ml-4">{title}</h2>
+                </div>
+                <div className="flex items-center bg-gray-700 rounded-lg p-1">
+                    {(['month', 'week', 'day'] as View[]).map(v => (
+                        <button key={v} onClick={() => setView(v)} className={`px-3 py-1 text-sm font-medium rounded-md capitalize transition-colors ${view === v ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-600'}`}>
+                            {v}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    const renderMonthView = () => {
+        const days: Moment[] = [];
+        let day = viewRange.start.clone();
+        while (day.isSameOrBefore(viewRange.end, 'day')) {
+            days.push(day.clone());
+            day.add(1, 'day');
+        }
+        
+        const dayNames = moment.weekdaysShort();
+
+        return (
+            <div className="grid grid-cols-7 border-t border-l border-gray-700">
+                {dayNames.map(name => <div key={name} className="p-2 text-center text-xs font-bold uppercase text-gray-400 border-b border-gray-700">{name}</div>)}
+                {days.map(d => {
+                    const eventsForDay = calendarEvents.filter(e => moment(e.start).isSame(d, 'day'));
+                    const isToday = d.isSame(moment(), 'day');
+                    const isCurrentMonth = d.isSame(currentDate, 'month');
+
+                    return (
+                        <div key={d.format('YYYY-MM-DD')} className={`relative min-h-[120px] p-2 border-b border-r border-gray-700 ${!isCurrentMonth ? 'bg-gray-800/50' : ''}`}>
+                            <span className={`text-sm ${isToday ? 'bg-indigo-600 text-white rounded-full h-6 w-6 flex items-center justify-center font-bold' : isCurrentMonth ? 'text-gray-200' : 'text-gray-500'}`}>
+                                {d.date()}
+                            </span>
+                            <div className="mt-1 space-y-1">
+                                {eventsForDay.map(e => (
+                                    <div key={e.id}
+                                        onMouseEnter={(ev) => handleEventMouseEnter(e, ev)}
+                                        onMouseLeave={handleEventMouseLeave}
+                                        onClick={() => handleEventClick(e)}
+                                        className={`p-1 rounded-md text-white text-xs truncate cursor-pointer ${getEventColor(e.type)}`}
+                                    >
+                                        {e.title}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
+
+    const renderWeekView = () => {
+        const days: Moment[] = [];
+        let day = currentDate.clone().startOf('week');
+        for (let i = 0; i < 7; i++) {
+            days.push(day.clone());
+            day.add(1, 'day');
+        }
+
+        return (
+            <div className="border-t border-gray-700 divide-y divide-gray-700">
+                {days.map(d => {
+                    const eventsForDay = calendarEvents.filter(e => moment(e.start).isSame(d, 'day'));
+                    const isToday = d.isSame(moment(), 'day');
+                    return (
+                        <div key={d.format()} className="p-4">
+                            <h3 className={`font-semibold mb-2 ${isToday ? 'text-indigo-400' : ''}`}>{d.format('dddd, MMM D')}</h3>
+                            {eventsForDay.length > 0 ? (
+                                <div className="space-y-2">
+                                    {eventsForDay.map(e => (
+                                        <div key={e.id}
+                                            onMouseEnter={(ev) => handleEventMouseEnter(e, ev)}
+                                            onMouseLeave={handleEventMouseLeave}
+                                            onClick={() => handleEventClick(e)}
+                                            className={`p-2 rounded-md text-white flex justify-between items-center cursor-pointer ${getEventColor(e.type)}`}
+                                        >
+                                            <span className="font-medium">{e.title}</span>
+                                            <span className="font-mono">{formatCurrency(e.amount)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : <p className="text-sm text-gray-500">No events scheduled.</p>}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
+
+    const renderDayView = () => {
+        const eventsForDay = calendarEvents.filter(e => moment(e.start).isSame(currentDate, 'day'));
+         return (
+             <div className="border-t border-gray-700 p-4">
+                {eventsForDay.length > 0 ? (
+                    <div className="space-y-2">
+                        {eventsForDay.map(e => (
+                            <div key={e.id}
+                                onMouseEnter={(ev) => handleEventMouseEnter(e, ev)}
+                                onMouseLeave={handleEventMouseLeave}
+                                onClick={() => handleEventClick(e)}
+                                className={`p-2 rounded-md text-white flex justify-between items-center cursor-pointer ${getEventColor(e.type)}`}
+                            >
+                                <span className="font-medium">{e.title}</span>
+                                <span className="font-mono">{formatCurrency(e.amount)}</span>
+                            </div>
+                        ))}
+                    </div>
+                ) : <p className="text-sm text-gray-500">No events scheduled for this day.</p>}
+             </div>
+         );
+    };
+
+    const renderPopover = () => {
+        if (!hoveredEvent) return null;
+        const { event, position } = hoveredEvent;
+        return (
+            <div className="fixed bg-gray-900 border border-gray-600 rounded-lg shadow-lg p-3 text-sm text-white z-50 pointer-events-none"
+                 style={{ top: position.y + 10, left: position.x + 10 }}>
+                <p className="font-bold">{event.title}</p>
+                <p className="capitalize">{event.type}: <span className="font-mono">{formatCurrency(event.amount)}</span></p>
+            </div>
+        );
+    };
 
     return (
         <div className="space-y-6">
-             <header>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Financial Calendar</h1>
-                <p className="text-gray-500 dark:text-gray-400">Visualize your upcoming financial events and forecast loan repayments.</p>
+            <header>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Calendar</h1>
+                <p className="text-gray-500 dark:text-gray-400">View your financial events on a calendar.</p>
             </header>
-            
-            <Card title="Calendar View">
-                <div className="flex justify-between items-center mb-4">
-                    <button onClick={() => setCurrentDate(currentDate.clone().subtract(1, 'month'))} className={btnSecondaryClasses}>&lt; Prev</button>
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{currentDate.format('MMMM YYYY')}</h2>
-                    <button onClick={() => setCurrentDate(currentDate.clone().add(1, 'month'))} className={btnSecondaryClasses}>Next &gt;</button>
-                </div>
-                
-                <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(dayName => (
-                        <div key={dayName} className="text-center font-semibold py-2 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs sm:text-sm">{dayName}</div>
-                    ))}
-                    {calendarDays.map(d => {
-                        const isCurrentMonth = d.isSame(currentDate, 'month');
-                        const isToday = d.isSame(moment(), 'day');
-                        const dayEvents = getEventsForDay(d);
-
-                        return (
-                            <div key={d.format('YYYY-MM-DD')} className={`p-1.5 h-24 sm:h-32 flex flex-col bg-white dark:bg-gray-800 ${!isCurrentMonth ? 'opacity-50' : ''}`}>
-                                <div className={`text-xs sm:text-sm font-semibold ${isToday ? 'text-indigo-500' : 'text-gray-900 dark:text-white'}`}>{d.format('D')}</div>
-                                <div className="flex-grow overflow-y-auto text-xs space-y-1 mt-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
-                                    {dayEvents.slice(0, 3).map(event => (
-                                        // FIX: Update call to getEventTypeColor to pass event.resource.type
-                                        <div key={event.id} title={event.title} className={`p-1 rounded text-white truncate ${getEventTypeColor(event.resource.type)}`}>
-                                            <span className="hidden sm:inline">{event.title}</span>
-                                            <span className="sm:hidden">{event.title.split(':')[0]}</span>
-                                        </div>
-                                    ))}
-                                     {dayEvents.length > 3 && ( <div className="text-center text-gray-500 dark:text-gray-400">+{dayEvents.length - 3} more</div> )}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </Card>
-
-            <Card title="Loan Repayment Forecast">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                     <select name="liabilityId" value={forecastSettings.liabilityId} onChange={(e) => setForecastSettings({...forecastSettings, liabilityId: e.target.value})} className={inputClasses}>
-                        <option value="">Select a Liability</option>
-                        {liabilities.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                    </select>
-                    <input name="repaymentValue" type="number" placeholder="Repayment Value" value={forecastSettings.repaymentValue} onChange={(e) => setForecastSettings({...forecastSettings, repaymentValue: e.target.value})} className={inputClasses} />
-                    <select name="repaymentFrequency" value={forecastSettings.repaymentFrequency} onChange={(e) => setForecastSettings({...forecastSettings, repaymentFrequency: e.target.value as any})} className={inputClasses}>
-                        <option value="weekly">Weekly</option>
-                        <option value="fortnightly">Fortnightly</option>
-                        <option value="monthly">Monthly</option>
-                    </select>
-                </div>
-                <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={loanForecastData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
-                            <XAxis dataKey="date" stroke="#9CA3AF" />
-                            <YAxis stroke="#9CA3AF" tickFormatter={(value) => formatCurrency(Number(value)).replace(/\.00$/, '')} />
-                            <Tooltip
-                                contentStyle={{ backgroundColor: '#1F2937', borderColor: '#374151' }}
-                                formatter={(value: number) => [formatCurrency(value), 'Balance']}
-                            />
-                            <Legend />
-                            <Line type="monotone" dataKey="balance" stroke="#6366F1" strokeWidth={2} activeDot={{ r: 8 }} dot={false} />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </div>
-            </Card>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                {renderHeader()}
+                {view === 'month' && renderMonthView()}
+                {view === 'week' && renderWeekView()}
+                {view === 'day' && renderDayView()}
+            </div>
+            {renderPopover()}
+            {editingItem && (
+                <BudgetItemModal 
+                    item={editingItem}
+                    onSave={handleModalSave}
+                    onClose={() => setEditingItem(null)}
+                    liabilities={liabilities}
+                />
+            )}
         </div>
     );
 };

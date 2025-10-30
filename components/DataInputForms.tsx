@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { CashAccount, Investment, Property, Liability } from '../types';
+// FIX: Import AssetCategory to be used for default values.
+import { CashAccount, Investment, Property, Liability, AssetCategory } from '../types';
 
 interface DataInputFormsProps {
   addCashAccount: (account: Omit<CashAccount, 'id'>) => void;
@@ -41,10 +42,13 @@ export const DataInputForms: React.FC<DataInputFormsProps> = ({
   const handleAddInvestment = (e: React.FormEvent) => {
     e.preventDefault();
     if (invTicker && invQty && invCost) {
+      // FIX: Add missing 'currentValue' and 'category' properties.
       addInvestment({
         ticker: invTicker.toUpperCase(),
         quantity: parseFloat(invQty),
         costBasisPerUnit: parseFloat(invCost),
+        currentValue: parseFloat(invQty) * parseFloat(invCost),
+        category: AssetCategory.Stock,
       });
       setInvTicker('');
       setInvQty('');
@@ -55,7 +59,8 @@ export const DataInputForms: React.FC<DataInputFormsProps> = ({
   const handleAddProperty = (e: React.FormEvent) => {
     e.preventDefault();
     if (propName && propValue) {
-      addProperty({ name: propName, currentValue: parseFloat(propValue) });
+      // FIX: Add missing 'category' property.
+      addProperty({ name: propName, currentValue: parseFloat(propValue), category: AssetCategory.Property });
       setPropName('');
       setPropValue('');
     }

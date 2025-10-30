@@ -2,7 +2,6 @@ import React from 'react';
 import { CashAccount, Investment, Property, AssetCategory } from '../types';
 import Card from '../components/Card';
 import InvestmentTable from '../components/InvestmentTable';
-import FinancialInsights from '../components/FinancialInsights';
 import AllocationDonutChart from '../components/AllocationDonutChart';
 
 interface DashboardPageProps {
@@ -73,11 +72,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                  <Card title="Total Assets">
                     <div className="text-4xl font-bold text-green-500 tracking-tight">{formatCurrency(totalAssets)}</div>
                      <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">What you own</div>
-                </Card>
+                    </Card>
                  <Card title="Total Liabilities">
                     <div className="text-4xl font-bold text-red-500 tracking-tight">{formatCurrency(totalLiabilities)}</div>
                      <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">What you owe</div>
-                </Card>
+                    </Card>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -112,18 +111,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 </div>
             </div>
 
-             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                 <div className="lg:col-span-3">
-                    <Card title="Asset Allocation">
-                        <AllocationDonutChart data={allocationData} formatCurrency={formatCurrency} />
-                    </Card>
-                </div>
-                <div className="lg:col-span-2">
-                    <Card title="AI Financial Insights">
-                       <FinancialInsights />
-                    </Card>
-                </div>
-            </div>
+             <Card title="Asset Allocation">
+                <AllocationDonutChart data={allocationData} formatCurrency={formatCurrency} />
+            </Card>
         </main>
     );
 };

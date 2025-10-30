@@ -2,7 +2,6 @@ import React from 'react';
 import { CashAccount, Investment, Property, Liability } from '../types';
 import Card from './Card';
 import InvestmentTable from './InvestmentTable';
-import FinancialInsights from './FinancialInsights';
 import NetWorthChart from './NetWorthChart';
 
 interface DashboardProps {
@@ -92,12 +91,6 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="lg:col-span-3">
                 <Card title="Net Worth Trajectory (12 Months)">
                     <NetWorthChart data={netWorthChartData} />
-                </Card>
-            </div>
-            
-            <div className="lg:col-span-3">
-                <Card title="AI Financial Insights">
-                   <FinancialInsights />
                 </Card>
             </div>
             

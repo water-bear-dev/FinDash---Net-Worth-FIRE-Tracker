@@ -12,16 +12,20 @@ interface BudgetItemModalProps {
 
 const BudgetItemModal: React.FC<BudgetItemModalProps> = ({ item, onSave, onClose, liabilities, defaultType = 'expense' }) => {
     const getInitialFormData = (): Omit<BudgetItem, 'id'> => {
-        const defaults = {
+        // FIX: Determine the type correctly, prioritizing the existing item's type.
+        // This resolves the TypeScript error by ensuring `type` has the strict union type.
+        const type = item?.type || defaultType;
+        const defaults: Omit<BudgetItem, 'id'> = {
             name: '',
-            category: defaultType === 'income' ? incomeCategories[0] : expenseCategories[0].items[0],
+            // Also fix a bug where category didn't respect the existing item's type.
+            category: type === 'income' ? incomeCategories[0] : expenseCategories[0].items[0],
             amount: 0,
-            type: defaultType,
+            type: type,
             date: new Date().toISOString().split('T')[0],
             isRecurring: false,
             recurringSettings: {
-                frequency: 'monthly' as RecurringFrequency,
-                endCondition: 'never' as RecurringEndCondition,
+                frequency: 'monthly',
+                endCondition: 'never',
             }
         };
         if (item) {
@@ -37,32 +41,38 @@ const BudgetItemModal: React.FC<BudgetItemModalProps> = ({ item, onSave, onClose
     const [formData, setFormData] = useState<Omit<BudgetItem, 'id'>>(getInitialFormData);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value, type } = e.target;
+        const { name, value, type: inputType } = e.target;
         if (name.startsWith('recurringSettings.')) {
             const key = name.split('.')[1];
             setFormData(prev => ({
                 ...prev,
-                recurringSettings: { ...(prev.recurringSettings!), [key]: value }
+                recurringSettings: { 
+                    ...(prev.recurringSettings!), 
+                    [key]: inputType === 'number' ? parseFloat(value) || 0 : value 
+                }
             }));
         } else {
-             const isCheckbox = type === 'checkbox';
-             const isNumber = type === 'number';
+             const isCheckbox = inputType === 'checkbox';
+             const isNumber = inputType === 'number';
              
-             // FIX: The property 'type' has a strict union type ('income' | 'expense').
-             // When using a computed property name `[name]`, TypeScript widens the type to `string`,
-             // causing a type mismatch. We handle this by explicitly re-typing the state object.
-             setFormData(prev => {
-                const updatedState = {
+            // FIX: The property 'type' has a strict union type ('income' | 'expense').
+            // When using a computed property name `[name]` in the state update, TypeScript
+            // widens the type of `type` to a generic `string`, causing a type mismatch.
+            // This is fixed by handling the 'type' field as a special case to preserve its specific type.
+            if (name === 'type') {
+                const newType = value as 'income' | 'expense';
+                setFormData(prev => ({
+                    ...prev,
+                    type: newType,
+                    // When type changes, also reset category to a valid default.
+                    category: newType === 'income' ? incomeCategories[0] : expenseCategories[0].items[0],
+                }));
+            } else {
+                setFormData(prev => ({
                     ...prev,
                     [name]: isCheckbox ? (e.target as HTMLInputElement).checked : (isNumber ? parseFloat(value) || 0 : value),
-                };
-
-                if (name === 'type') {
-                    updatedState.type = value as 'income' | 'expense';
-                }
-
-                return updatedState;
-            });
+                }));
+            }
         }
     };
 
