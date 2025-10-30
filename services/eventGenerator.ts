@@ -15,7 +15,7 @@ export const generateRecurringEvents = (
         // Include one-time items that fall within the range
         if (!item.isRecurring) {
             if (moment(item.date).isBetween(start, end, undefined, '[]')) {
-                events.push(item);
+                events.push({ ...item, originalId: item.id });
             }
             return;
         }
@@ -80,6 +80,7 @@ export const generateRecurringEvents = (
             if (currentDate.isSameOrAfter(start) && isValidDate) {
                  events.push({
                     ...item,
+                    originalId: item.id,
                     id: `${item.id}-${currentDate.format('YYYYMMDD')}`,
                     date: currentDate.format('YYYY-MM-DD'),
                  });

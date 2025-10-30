@@ -2,6 +2,7 @@ import React, { useState, ChangeEvent, useMemo } from 'react';
 import { Transaction, AssetCategory, Dividend, Investment } from '../types';
 import Card from '../components/Card';
 import AllocationDonutChart from '../components/AllocationDonutChart';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 interface TransactionsPageProps {
     transactions: Transaction[];
@@ -127,6 +128,8 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
 }) => {
     const [isTransactionModalOpen, setTransactionModalOpen] = useState(false);
     const [isDividendModalOpen, setDividendModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string; type: 'transaction' | 'dividend' } | null>(null);
+
     
     const summaries = useMemo(() => {
         const summaryData: Record<string, { invested: number; currentValue: number; pnl: number; pnlPercent: number }> = {};
@@ -160,6 +163,16 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
         addDividend(dividend);
         setDividendModalOpen(false);
     }
+
+    const handleConfirmDelete = () => {
+        if (!itemToDelete) return;
+        if (itemToDelete.type === 'transaction') {
+            removeTransaction(itemToDelete.id);
+        } else {
+            removeDividend(itemToDelete.id);
+        }
+        setItemToDelete(null);
+    };
 
     const totalDividends = dividends.reduce((sum, d) => sum + d.amount, 0);
 
@@ -228,7 +241,7 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
                                     <td className="px-4 py-2 text-right">{formatCurrency(t.pricePerUnit)}</td>
                                     <td className="px-4 py-2 text-right">{formatCurrency(t.quantity * t.pricePerUnit)}</td>
                                     <td className="px-4 py-2 text-center">
-                                        <button onClick={() => removeTransaction(t.id)} className={`${btnDangerClasses} w-auto text-xs py-1 px-2`}>Delete</button>
+                                        <button onClick={() => setItemToDelete({ id: t.id, name: `${t.type.toUpperCase()} ${t.ticker}`, type: 'transaction' })} className={`${btnDangerClasses} w-auto text-xs py-1 px-2`}>Delete</button>
                                     </td>
                                 </tr>
                             ))}
@@ -254,7 +267,7 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
                                     <td className="px-4 py-2 font-medium">{d.ticker}</td>
                                     <td className="px-4 py-2 text-right">{formatCurrency(d.amount)}</td>
                                     <td className="px-4 py-2 text-center">
-                                        <button onClick={() => removeDividend(d.id)} className={`${btnDangerClasses} w-auto text-xs py-1 px-2`}>Delete</button>
+                                        <button onClick={() => setItemToDelete({ id: d.id, name: `Dividend for ${d.ticker}`, type: 'dividend' })} className={`${btnDangerClasses} w-auto text-xs py-1 px-2`}>Delete</button>
                                     </td>
                                 </tr>
                             ))}
@@ -265,6 +278,14 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
 
             {isTransactionModalOpen && <TransactionModal onSave={handleSaveTransaction} onClose={() => setTransactionModalOpen(false)} />}
             {isDividendModalOpen && <DividendModal onSave={handleSaveDividend} onClose={() => setDividendModalOpen(false)} />}
+            
+            <ConfirmationModal
+                isOpen={!!itemToDelete}
+                onClose={() => setItemToDelete(null)}
+                onConfirm={handleConfirmDelete}
+                title={`Delete ${itemToDelete?.type}`}
+                message={`Are you sure you want to delete "${itemToDelete?.name}"? This action cannot be undone.`}
+            />
         </div>
     );
 };

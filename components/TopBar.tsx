@@ -1,17 +1,28 @@
 import React from 'react';
+import { Bars3Icon } from '@heroicons/react/24/outline';
 
 interface TopBarProps {
     theme: string;
     toggleTheme: () => void;
     userName: string;
+    toggleSidebar: () => void;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ theme, toggleTheme, userName }) => {
+const TopBar: React.FC<TopBarProps> = ({ theme, toggleTheme, userName, toggleSidebar }) => {
     return (
         <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
-            <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                Welcome{userName ? `, ${userName}` : ''}
-            </h1>
+            <div className="flex items-center">
+                 <button 
+                    onClick={toggleSidebar} 
+                    className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-2 hidden sm:block"
+                    aria-label="Toggle sidebar"
+                >
+                    <Bars3Icon className="h-6 w-6" />
+                </button>
+                <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                    Welcome{userName ? `, ${userName}` : ''}
+                </h1>
+            </div>
             <button
                 onClick={toggleTheme}
                 className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"

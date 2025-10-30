@@ -77,6 +77,7 @@ export interface BudgetItem {
     date: string;
     isRecurring: boolean;
     recurringSettings?: RecurringSettings;
+    originalId?: string;
 }
 
 export interface UserProfile {

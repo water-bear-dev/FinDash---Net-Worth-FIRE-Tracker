@@ -125,6 +125,7 @@ const App: React.FC = () => {
     const [targetAnnualSpending, setTargetAnnualSpending] = useLocalStorage<number>('targetAnnualSpending', 60000);
     const [currency, setCurrency] = useLocalStorage<string>('currency', 'USD');
     const [theme, setTheme] = useLocalStorage<string>('theme', 'dark');
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     const [isPricesLoading, setIsPricesLoading] = useState(false);
 
@@ -244,6 +245,7 @@ const App: React.FC = () => {
     // Helper functions
     const formatCurrency = useCallback((value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(value), [currency]);
     const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+    const toggleSidebar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
 
     useEffect(() => {
         document.documentElement.className = theme;
@@ -252,9 +254,9 @@ const App: React.FC = () => {
     return (
         <Router>
             <div className={`flex h-screen bg-gray-100 dark:bg-gray-900 ${theme}`}>
-                <Sidebar />
-                <div className="flex-1 flex flex-col ml-0 sm:ml-64">
-                    <TopBar theme={theme} toggleTheme={toggleTheme} userName={userProfile.name} />
+                <Sidebar isCollapsed={isSidebarCollapsed} />
+                <div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'ml-0 sm:ml-20' : 'ml-0 sm:ml-64'}`}>
+                    <TopBar theme={theme} toggleTheme={toggleTheme} userName={userProfile.name} toggleSidebar={toggleSidebar} />
                     <main className="flex-1 p-6 overflow-y-auto">
                         <Routes>
                             <Route path="/" element={

@@ -102,7 +102,8 @@ const CalendarPage: React.FC<CalendarPageProps> = (props) => {
 
     const handleEventClick = (event: CalendarEvent) => {
         if (event.type === 'income' || event.type === 'expense') {
-             const originalId = (event.originalItem as BudgetItem).id.split('-')[0];
+             // Find the original recurring template to edit, not the generated instance
+             const originalId = (event.originalItem as BudgetItem).originalId || (event.originalItem as BudgetItem).id;
              const originalBudgetItem = budgetItems.find(item => item.id === originalId);
              if (originalBudgetItem) {
                  setEditingItem(originalBudgetItem);
@@ -136,14 +137,14 @@ const CalendarPage: React.FC<CalendarPageProps> = (props) => {
         return (
             <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-2">
-                    <button onClick={handlePrev} className="p-2 rounded-full hover:bg-gray-700"><ChevronLeftIcon className="h-5 w-5"/></button>
-                    <button onClick={handleNext} className="p-2 rounded-full hover:bg-gray-700"><ChevronRightIcon className="h-5 w-5"/></button>
-                    <button onClick={handleToday} className="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-700 hover:bg-gray-600">Today</button>
+                    <button onClick={handlePrev} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><ChevronLeftIcon className="h-5 w-5"/></button>
+                    <button onClick={handleNext} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><ChevronRightIcon className="h-5 w-5"/></button>
+                    <button onClick={handleToday} className="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">Today</button>
                     <h2 className="text-xl font-bold ml-4">{title}</h2>
                 </div>
-                <div className="flex items-center bg-gray-700 rounded-lg p-1">
+                <div className="flex items-center bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
                     {(['month', 'week', 'day'] as View[]).map(v => (
-                        <button key={v} onClick={() => setView(v)} className={`px-3 py-1 text-sm font-medium rounded-md capitalize transition-colors ${view === v ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-600'}`}>
+                        <button key={v} onClick={() => setView(v)} className={`px-3 py-1 text-sm font-medium rounded-md capitalize transition-colors ${view === v ? 'bg-indigo-600 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>
                             {v}
                         </button>
                     ))}
@@ -163,16 +164,16 @@ const CalendarPage: React.FC<CalendarPageProps> = (props) => {
         const dayNames = moment.weekdaysShort();
 
         return (
-            <div className="grid grid-cols-7 border-t border-l border-gray-700">
-                {dayNames.map(name => <div key={name} className="p-2 text-center text-xs font-bold uppercase text-gray-400 border-b border-gray-700">{name}</div>)}
+            <div className="grid grid-cols-7 border-t border-l border-gray-200 dark:border-gray-700">
+                {dayNames.map(name => <div key={name} className="p-2 text-center text-xs font-bold uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">{name}</div>)}
                 {days.map(d => {
                     const eventsForDay = calendarEvents.filter(e => moment(e.start).isSame(d, 'day'));
                     const isToday = d.isSame(moment(), 'day');
                     const isCurrentMonth = d.isSame(currentDate, 'month');
 
                     return (
-                        <div key={d.format('YYYY-MM-DD')} className={`relative min-h-[120px] p-2 border-b border-r border-gray-700 ${!isCurrentMonth ? 'bg-gray-800/50' : ''}`}>
-                            <span className={`text-sm ${isToday ? 'bg-indigo-600 text-white rounded-full h-6 w-6 flex items-center justify-center font-bold' : isCurrentMonth ? 'text-gray-200' : 'text-gray-500'}`}>
+                        <div key={d.format('YYYY-MM-DD')} className={`relative min-h-[120px] p-2 border-b border-r border-gray-200 dark:border-gray-700 ${!isCurrentMonth ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
+                            <span className={`text-sm ${isToday ? 'bg-indigo-600 text-white rounded-full h-6 w-6 flex items-center justify-center font-bold' : isCurrentMonth ? 'text-gray-900 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'}`}>
                                 {d.date()}
                             </span>
                             <div className="mt-1 space-y-1">
@@ -203,13 +204,13 @@ const CalendarPage: React.FC<CalendarPageProps> = (props) => {
         }
 
         return (
-            <div className="border-t border-gray-700 divide-y divide-gray-700">
+            <div className="border-t border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
                 {days.map(d => {
                     const eventsForDay = calendarEvents.filter(e => moment(e.start).isSame(d, 'day'));
                     const isToday = d.isSame(moment(), 'day');
                     return (
                         <div key={d.format()} className="p-4">
-                            <h3 className={`font-semibold mb-2 ${isToday ? 'text-indigo-400' : ''}`}>{d.format('dddd, MMM D')}</h3>
+                            <h3 className={`font-semibold mb-2 ${isToday ? 'text-indigo-500 dark:text-indigo-400' : ''}`}>{d.format('dddd, MMM D')}</h3>
                             {eventsForDay.length > 0 ? (
                                 <div className="space-y-2">
                                     {eventsForDay.map(e => (
@@ -235,7 +236,7 @@ const CalendarPage: React.FC<CalendarPageProps> = (props) => {
     const renderDayView = () => {
         const eventsForDay = calendarEvents.filter(e => moment(e.start).isSame(currentDate, 'day'));
          return (
-             <div className="border-t border-gray-700 p-4">
+             <div className="border-t border-gray-200 dark:border-gray-700 p-4">
                 {eventsForDay.length > 0 ? (
                     <div className="space-y-2">
                         {eventsForDay.map(e => (
@@ -268,16 +269,18 @@ const CalendarPage: React.FC<CalendarPageProps> = (props) => {
     };
 
     return (
-        <div className="space-y-6">
-            <header>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Calendar</h1>
-                <p className="text-gray-500 dark:text-gray-400">View your financial events on a calendar.</p>
-            </header>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                {renderHeader()}
-                {view === 'month' && renderMonthView()}
-                {view === 'week' && renderWeekView()}
-                {view === 'day' && renderDayView()}
+        <>
+            <div className="space-y-6">
+                <header>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Calendar</h1>
+                    <p className="text-gray-500 dark:text-gray-400">View your financial events on a calendar.</p>
+                </header>
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    {renderHeader()}
+                    {view === 'month' && renderMonthView()}
+                    {view === 'week' && renderWeekView()}
+                    {view === 'day' && renderDayView()}
+                </div>
             </div>
             {renderPopover()}
             {editingItem && (
@@ -288,7 +291,7 @@ const CalendarPage: React.FC<CalendarPageProps> = (props) => {
                     liabilities={liabilities}
                 />
             )}
-        </div>
+        </>
     );
 };
 

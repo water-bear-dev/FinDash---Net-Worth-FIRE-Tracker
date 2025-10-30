@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CashAccount, Property, Liability, AssetCategory } from '../types';
 import Card from '../components/Card';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 type Item = CashAccount | Property | Liability;
 type ItemType = 'cash' | 'property' | 'liability';
@@ -29,6 +30,8 @@ const ManageDataPage: React.FC<ManageDataPageProps> = (props) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Item | null>(null);
     const [editingItemType, setEditingItemType] = useState<ItemType | null>(null);
+    const [itemToDelete, setItemToDelete] = useState<{ item: Item; type: ItemType; removeFn: (id: string) => void } | null>(null);
+
 
     const [formState, setFormState] = useState({
         cashName: '', cashBalance: '',
@@ -67,6 +70,13 @@ const ManageDataPage: React.FC<ManageDataPageProps> = (props) => {
         if (!editingItem) return;
         const { name, value } = e.target;
         setEditingItem(prev => prev ? { ...prev, [name]: name === 'name' ? value : parseFloat(value) || 0 } : null);
+    };
+
+    const handleConfirmDelete = () => {
+        if (itemToDelete) {
+            itemToDelete.removeFn(itemToDelete.item.id);
+            setItemToDelete(null);
+        }
     };
 
     const inputClasses = "block w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-indigo-500 dark:focus:border-indigo-500";
@@ -138,7 +148,7 @@ const ManageDataPage: React.FC<ManageDataPageProps> = (props) => {
         <td className="px-4 py-2 text-right">
             <div className="flex justify-end items-center space-x-2">
                 <button onClick={() => handleEditClick(item, type)} className={`${btnSecondaryClasses} w-auto text-xs py-1 px-2`}>Edit</button>
-                <button onClick={() => removeFn(item.id)} className={`${btnDangerClasses} w-auto text-xs py-1 px-2`}>Delete</button>
+                <button onClick={() => setItemToDelete({ item, type, removeFn })} className={`${btnDangerClasses} w-auto text-xs py-1 px-2`}>Delete</button>
             </div>
         </td>
     );
@@ -186,6 +196,14 @@ const ManageDataPage: React.FC<ManageDataPageProps> = (props) => {
                     </div>
                 </div>
             )}
+
+            <ConfirmationModal
+                isOpen={!!itemToDelete}
+                onClose={() => setItemToDelete(null)}
+                onConfirm={handleConfirmDelete}
+                title={`Delete ${itemToDelete?.type}`}
+                message={`Are you sure you want to delete "${itemToDelete?.item.name}"? This action cannot be undone.`}
+            />
         </div>
     );
 };
