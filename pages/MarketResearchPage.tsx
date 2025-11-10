@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Card from '../components/Card';
 import { fetchCompanyProfile, fetchStockNews } from '../services/marketDataService';
 import { CompanyProfile, StockNewsItem } from '../types';
+import ApiKeyWarning from '../components/ApiKeyWarning';
 
 interface MarketResearchPageProps {
     fmpApiKey: string;
@@ -54,17 +55,19 @@ const MarketResearchPage: React.FC<MarketResearchPageProps> = ({ fmpApiKey, form
                 <p className="text-gray-500 dark:text-gray-400">Get detailed company profiles and news for any stock ticker.</p>
             </header>
             
+            {!fmpApiKey && <ApiKeyWarning featureName="market research" />}
+            
             <Card title="Ticker Search">
                 <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
                     <input
                         type="text"
                         value={ticker}
                         onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                        placeholder="e.g., AAPL, TSLA"
+                        placeholder="e.g., AAPL, CBA.AX"
                         className={`${inputClasses} flex-grow`}
-                        disabled={isLoading}
+                        disabled={isLoading || !fmpApiKey}
                     />
-                    <button type="submit" className={btnPrimaryClasses} disabled={isLoading}>
+                    <button type="submit" className={btnPrimaryClasses} disabled={isLoading || !fmpApiKey}>
                         {isLoading ? 'Searching...' : 'Search'}
                     </button>
                 </form>

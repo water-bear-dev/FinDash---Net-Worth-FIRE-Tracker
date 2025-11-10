@@ -9,6 +9,7 @@ import ExpensesPage from './pages/ExpensesPage';
 import CalendarPage from './pages/CalendarPage';
 import SettingsPage from './pages/SettingsPage';
 import IncomesPage from './pages/IncomesPage';
+import MarketResearchPage from './pages/MarketResearchPage';
 import { 
     CashAccount, Investment, Property, Liability, Transaction, 
     Dividend, BudgetItem, UserProfile, AssetCategory
@@ -43,6 +44,7 @@ const sampleTransactions: Transaction[] = [
   { id: 't6', ticker: 'AAPL', category: AssetCategory.Stock, type: 'sell', date: '2024-02-28', quantity: 10, pricePerUnit: 180.00 },
   // NOTE: Crypto price fetching is not fully implemented in marketDataService, so this may not show a live value.
   { id: 't7', ticker: 'ETH-USD', category: AssetCategory.Crypto, type: 'buy', date: '2023-11-15', quantity: 2, pricePerUnit: 2000 },
+  { id: 't8', ticker: 'CBA.AX', category: AssetCategory.Stock, type: 'buy', date: '2023-10-05', quantity: 100, pricePerUnit: 95.50 },
 ];
 
 const sampleDividends: Dividend[] = [
@@ -201,7 +203,95 @@ const App: React.FC = () => {
     const remove = <T extends { id: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>, id: string) => {
         setter(prev => prev.filter(i => i.id !== id));
     };
+
+    const updateBudgetItemWithScope = (item: BudgetItem, scope?: 'one' | 'future', occurrenceDate?: string) => {
+        // If it's a new item (no ID), just add it.
+        if (!('id' in item) || !item.id) {
+            addOrUpdate(setBudgetItems, item);
+            return;
+        }
+
+        const originalItem = budgetItems.find(bi => bi.id === item.id);
+        
+        // If not recurring, not an edit of a recurring item, or no scope provided, do a simple update
+        if (!originalItem || !originalItem.isRecurring || !scope || !occurrenceDate) {
+            setBudgetItems(prev => prev.map(i => i.id === item.id ? item : i));
+            return;
+        }
+
+        if (scope === 'one') {
+            // Create a one-time exception
+            const exceptionItem: Omit<BudgetItem, 'id'> = {
+                ...item,
+                date: occurrenceDate,
+                isRecurring: false,
+                recurringSettings: undefined,
+                originalId: item.id,
+            };
+            addOrUpdate(setBudgetItems, exceptionItem);
+        } else if (scope === 'future') {
+            // Split the series: end the old one, create a new one
+            setBudgetItems(prev => {
+                const newItems = [...prev];
+                const originalItemIndex = newItems.findIndex(i => i.id === item.id);
+                if (originalItemIndex === -1) return prev; 
+
+                // 1. End the old series the day before the change
+                const modifiedOriginalItem = { ...newItems[originalItemIndex] };
+                modifiedOriginalItem.recurringSettings = {
+                    ...(modifiedOriginalItem.recurringSettings!),
+                    endCondition: 'date',
+                    endDate: moment(occurrenceDate).subtract(1, 'day').format('YYYY-MM-DD'),
+                };
+                
+                // If the new end date is before the series start date, it effectively archives the old series
+                // which is correct if the user edits the very first occurrence.
+                newItems[originalItemIndex] = modifiedOriginalItem;
+
+                // 2. Create the new series starting from the occurrence date
+                const newSeriesItem: BudgetItem = {
+                    ...item,
+                    id: uuidv4(),
+                    date: occurrenceDate,
+                    originalId: undefined, // This is a new base item now
+                };
+
+                newItems.push(newSeriesItem);
+                
+                return newItems;
+            });
+        }
+    };
     
+    const deleteBudgetItemWithScope = (item: BudgetItem, scope?: 'one' | 'future', occurrenceDate?: string) => {
+        if (!item.isRecurring || !scope || !occurrenceDate) {
+            remove(setBudgetItems, item.id);
+            return;
+        }
+
+        setBudgetItems(prev => {
+            const newItems = [...prev];
+            const originalItemIndex = newItems.findIndex(i => i.id === item.id);
+            if (originalItemIndex === -1) return prev;
+
+            const updatedItem = { ...newItems[originalItemIndex] };
+            updatedItem.recurringSettings = { ...updatedItem.recurringSettings! };
+            
+            if (scope === 'one') {
+                if (!updatedItem.recurringSettings.exceptionDates) {
+                    updatedItem.recurringSettings.exceptionDates = [];
+                }
+                updatedItem.recurringSettings.exceptionDates.push(occurrenceDate);
+            } else if (scope === 'future') {
+                 updatedItem.recurringSettings.endCondition = 'date';
+                 updatedItem.recurringSettings.endDate = moment(occurrenceDate).subtract(1, 'day').format('YYYY-MM-DD');
+            }
+            
+            newItems[originalItemIndex] = updatedItem;
+            return newItems;
+        });
+    };
+
     const addTransactionAndUpdateBudget = (transaction: Omit<Transaction, 'id'>) => {
         addOrUpdate(setTransactions, transaction);
         if (transaction.type === 'buy') {
@@ -303,6 +393,7 @@ const App: React.FC = () => {
                                     addDividend={(item) => addOrUpdate(setDividends, item)}
                                     removeDividend={(id) => remove(setDividends, id)}
                                     formatCurrency={formatCurrency}
+                                    fmpApiKey={fmpApiKey}
                                 />
                             } />
                              <Route path="/incomes" element={
@@ -310,8 +401,8 @@ const App: React.FC = () => {
                                     budgetItems={budgetItems}
                                     liabilities={liabilities}
                                     addBudgetItem={(item) => addOrUpdate(setBudgetItems, item)}
-                                    updateBudgetItem={(item) => addOrUpdate(setBudgetItems, item)}
-                                    removeBudgetItem={(id) => remove(setBudgetItems, id)}
+                                    updateBudgetItem={updateBudgetItemWithScope}
+                                    removeBudgetItem={deleteBudgetItemWithScope}
                                     formatCurrency={formatCurrency}
                                 />
                             } />
@@ -320,8 +411,8 @@ const App: React.FC = () => {
                                     budgetItems={budgetItems}
                                     liabilities={liabilities}
                                     addBudgetItem={(item) => addOrUpdate(setBudgetItems, item)}
-                                    updateBudgetItem={(item) => addOrUpdate(setBudgetItems, item)}
-                                    removeBudgetItem={(id) => remove(setBudgetItems, id)}
+                                    updateBudgetItem={updateBudgetItemWithScope}
+                                    removeBudgetItem={deleteBudgetItemWithScope}
                                     formatCurrency={formatCurrency}
                                 />
                             } />
@@ -332,7 +423,15 @@ const App: React.FC = () => {
                                     transactions={transactions}
                                     dividends={dividends}
                                     formatCurrency={formatCurrency}
-                                    updateBudgetItem={(item) => addOrUpdate(setBudgetItems, item)}
+                                    addBudgetItem={(item) => addOrUpdate(setBudgetItems, item)}
+                                    updateBudgetItem={updateBudgetItemWithScope}
+                                    removeBudgetItem={deleteBudgetItemWithScope}
+                                />
+                            } />
+                            <Route path="/research" element={
+                                <MarketResearchPage
+                                    fmpApiKey={fmpApiKey}
+                                    formatCurrency={formatCurrency}
                                 />
                             } />
                             <Route path="/settings" element={

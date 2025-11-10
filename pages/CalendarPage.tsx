@@ -3,7 +3,8 @@ import moment, { Moment } from 'moment';
 import { BudgetItem, Dividend, Liability, Transaction } from '../types';
 import { generateRecurringEvents } from '../services/eventGenerator';
 import BudgetItemModal from '../components/BudgetItemModal';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+import ConfirmationModal from '../components/ConfirmationModal';
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '@heroicons/react/24/solid';
 
 interface CalendarPageProps {
     budgetItems: BudgetItem[];
@@ -11,7 +12,9 @@ interface CalendarPageProps {
     transactions: Transaction[];
     dividends: Dividend[];
     formatCurrency: (value: number) => string;
-    updateBudgetItem: (item: BudgetItem) => void;
+    addBudgetItem: (item: Omit<BudgetItem, 'id'>) => void;
+    updateBudgetItem: (item: BudgetItem, scope?: 'one' | 'future', occurrenceDate?: string) => void;
+    removeBudgetItem: (item: BudgetItem, scope?: 'one' | 'future', occurrenceDate?: string) => void;
 }
 
 type CalendarEvent = {
@@ -26,12 +29,16 @@ type CalendarEvent = {
 type View = 'month' | 'week' | 'day';
 
 const CalendarPage: React.FC<CalendarPageProps> = (props) => {
-    const { budgetItems, liabilities, transactions, dividends, formatCurrency, updateBudgetItem } = props;
+    const { budgetItems, liabilities, transactions, dividends, formatCurrency, addBudgetItem, updateBudgetItem, removeBudgetItem } = props;
 
     const [currentDate, setCurrentDate] = useState(moment());
     const [view, setView] = useState<View>('month');
     const [hoveredEvent, setHoveredEvent] = useState<{ event: CalendarEvent; position: { x: number; y: number } } | null>(null);
-    const [editingItem, setEditingItem] = useState<BudgetItem | null>(null);
+    
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<(BudgetItem & { occurrenceDate?: string }) | null>(null);
+    const [itemToDelete, setItemToDelete] = useState<{ item: BudgetItem; occurrenceDate: string; isRecurring: boolean; } | null>(null);
+
 
     const { calendarEvents, viewRange } = useMemo(() => {
         const start = moment(currentDate).startOf(view);
@@ -100,22 +107,64 @@ const CalendarPage: React.FC<CalendarPageProps> = (props) => {
     };
     const handleEventMouseLeave = () => setHoveredEvent(null);
 
+    const handleCreateClick = () => {
+        setEditingItem(null); // Null item signifies creation mode
+        setIsModalOpen(true);
+    };
+
     const handleEventClick = (event: CalendarEvent) => {
-        if (event.type === 'income' || event.type === 'expense') {
-             // Find the original recurring template to edit, not the generated instance
-             const originalId = (event.originalItem as BudgetItem).originalId || (event.originalItem as BudgetItem).id;
-             const originalBudgetItem = budgetItems.find(item => item.id === originalId);
-             if (originalBudgetItem) {
-                 setEditingItem(originalBudgetItem);
-             }
+        if (event.type !== 'income' && event.type !== 'expense') {
+            return;
+        }
+
+        const occurrence = event.originalItem as BudgetItem;
+        
+        // Handle estimated interest events: treat as a template for a new, real expense
+        if (occurrence.originalId?.startsWith('liability-')) {
+            const newItemTemplate: BudgetItem = {
+                id: '', // Empty ID signifies a new item
+                name: occurrence.name, // Pass with "Est." so modal can identify it
+                category: occurrence.category,
+                amount: occurrence.amount,
+                type: 'expense',
+                date: occurrence.date,
+                isRecurring: false,
+            };
+            setEditingItem(newItemTemplate);
+            setIsModalOpen(true);
+            return;
+        }
+        
+        // Handle regular recurring/one-off budget items
+        const originalId = occurrence.originalId || occurrence.id;
+        const originalBudgetItem = budgetItems.find(item => item.id === originalId);
+        if (originalBudgetItem) {
+            setEditingItem({ ...originalBudgetItem, occurrenceDate: occurrence.date });
+            setIsModalOpen(true);
         }
     };
 
-    const handleModalSave = (item: BudgetItem | Omit<BudgetItem, 'id'>) => {
-        if ('id' in item) {
-            updateBudgetItem(item);
+    const handleModalSave = (item: BudgetItem | Omit<BudgetItem, 'id'>, scope?: 'one' | 'future', occurrenceDate?: string) => {
+        if ('id' in item && item.id) {
+            updateBudgetItem(item, scope, occurrenceDate);
+        } else {
+            addBudgetItem(item);
         }
-        setEditingItem(null);
+        setIsModalOpen(false);
+    };
+
+    const handleModalDelete = (item: BudgetItem) => {
+        if (editingItem?.occurrenceDate) {
+            setItemToDelete({ item, occurrenceDate: editingItem.occurrenceDate, isRecurring: item.isRecurring });
+        }
+        setIsModalOpen(false); // Close edit modal
+    };
+    
+    const handleConfirmDelete = (scope?: 'one' | 'future') => {
+        if (itemToDelete) {
+            removeBudgetItem(itemToDelete.item, scope, itemToDelete.occurrenceDate);
+            setItemToDelete(null);
+        }
     };
 
     const getEventColor = (type: CalendarEvent['type']) => ({
@@ -142,12 +191,18 @@ const CalendarPage: React.FC<CalendarPageProps> = (props) => {
                     <button onClick={handleToday} className="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">Today</button>
                     <h2 className="text-xl font-bold ml-4">{title}</h2>
                 </div>
-                <div className="flex items-center bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
-                    {(['month', 'week', 'day'] as View[]).map(v => (
-                        <button key={v} onClick={() => setView(v)} className={`px-3 py-1 text-sm font-medium rounded-md capitalize transition-colors ${view === v ? 'bg-indigo-600 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>
-                            {v}
-                        </button>
-                    ))}
+                <div className="flex items-center gap-2">
+                    <div className="flex items-center bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+                        {(['month', 'week', 'day'] as View[]).map(v => (
+                            <button key={v} onClick={() => setView(v)} className={`px-3 py-1 text-sm font-medium rounded-md capitalize transition-colors ${view === v ? 'bg-indigo-600 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>
+                                {v}
+                            </button>
+                        ))}
+                    </div>
+                    <button onClick={handleCreateClick} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">
+                        <PlusIcon className="h-4 w-4" />
+                        <span>Create</span>
+                    </button>
                 </div>
             </div>
         );
@@ -283,14 +338,26 @@ const CalendarPage: React.FC<CalendarPageProps> = (props) => {
                 </div>
             </div>
             {renderPopover()}
-            {editingItem && (
+            {isModalOpen && (
                 <BudgetItemModal 
                     item={editingItem}
                     onSave={handleModalSave}
-                    onClose={() => setEditingItem(null)}
+                    onClose={() => setIsModalOpen(false)}
+                    onDelete={handleModalDelete}
                     liabilities={liabilities}
+                    occurrenceDate={editingItem?.occurrenceDate}
+                    defaultDate={view === 'day' ? currentDate.format('YYYY-MM-DD') : undefined}
                 />
             )}
+            <ConfirmationModal
+                isOpen={!!itemToDelete}
+                onClose={() => setItemToDelete(null)}
+                onConfirm={handleConfirmDelete}
+                title={`Delete ${itemToDelete?.item.type}`}
+                message={itemToDelete?.isRecurring ? `You are deleting an occurrence of a recurring item.` : `Are you sure you want to delete "${itemToDelete?.item.name}"? This action cannot be undone.`}
+                showScopeOptions={itemToDelete?.isRecurring}
+                occurrenceDate={itemToDelete?.occurrenceDate}
+            />
         </>
     );
 };

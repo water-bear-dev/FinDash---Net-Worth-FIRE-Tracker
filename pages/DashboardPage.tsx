@@ -3,6 +3,7 @@ import { CashAccount, Investment, Property, AssetCategory } from '../types';
 import Card from '../components/Card';
 import InvestmentTable from '../components/InvestmentTable';
 import AllocationDonutChart from '../components/AllocationDonutChart';
+import ApiKeyWarning from '../components/ApiKeyWarning';
 
 interface DashboardPageProps {
     netWorth: number;
@@ -92,6 +93,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                                 {isPricesLoading ? 'Refreshing...' : 'Refresh Prices'}
                             </button>
                         </div>
+                        {!fmpApiKey && <ApiKeyWarning featureName="live price updates" />}
                         <InvestmentTable investments={holdings} />
                     </Card>
                 </div>

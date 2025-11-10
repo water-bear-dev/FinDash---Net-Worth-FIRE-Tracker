@@ -1,8 +1,12 @@
 import React, { useState, ChangeEvent, useMemo } from 'react';
-import { Transaction, AssetCategory, Dividend, Investment } from '../types';
+import { Transaction, AssetCategory, Dividend, Investment, UpcomingDividend } from '../types';
 import Card from '../components/Card';
 import AllocationDonutChart from '../components/AllocationDonutChart';
 import ConfirmationModal from '../components/ConfirmationModal';
+import TransactionHistoryTable from '../components/TransactionHistoryTable';
+import { fetchUpcomingDividends } from '../services/marketDataService';
+import { CalendarDaysIcon } from '@heroicons/react/24/outline';
+import ApiKeyWarning from '../components/ApiKeyWarning';
 
 interface TransactionsPageProps {
     transactions: Transaction[];
@@ -13,6 +17,7 @@ interface TransactionsPageProps {
     addDividend: (dividend: Omit<Dividend, 'id'>) => void;
     removeDividend: (id: string) => void;
     formatCurrency: (value: number) => string;
+    fmpApiKey: string;
 }
 
 const TransactionModal: React.FC<{
@@ -53,7 +58,7 @@ const TransactionModal: React.FC<{
                 <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Add Transaction</h3>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className={labelClasses}>Ticker</label><input name="ticker" type="text" placeholder="e.g., VOO" value={formState.ticker} onChange={handleChange} required className={inputClasses} /></div>
+                        <div><label className={labelClasses}>Ticker</label><input name="ticker" type="text" placeholder="e.g., VOO, CBA.AX" value={formState.ticker} onChange={handleChange} required className={inputClasses} /></div>
                         <div><label className={labelClasses}>Category</label><select name="category" value={formState.category} onChange={handleChange} required className={inputClasses}><option value={AssetCategory.Stock}>Stock</option><option value={AssetCategory.ETF}>ETF</option><option value={AssetCategory.Crypto}>Crypto</option></select></div>
                         <div><label className={labelClasses}>Type</label><select name="type" value={formState.type} onChange={handleChange} required className={inputClasses}><option value="buy">Buy</option><option value="sell">Sell</option></select></div>
                         <div><label className={labelClasses}>Date</label><input name="date" type="date" value={formState.date} onChange={handleChange} required className={inputClasses} /></div>
@@ -124,11 +129,15 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
     dividends,
     addDividend,
     removeDividend,
-    formatCurrency
+    formatCurrency,
+    fmpApiKey
 }) => {
     const [isTransactionModalOpen, setTransactionModalOpen] = useState(false);
     const [isDividendModalOpen, setDividendModalOpen] = useState(false);
-    const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string; type: 'transaction' | 'dividend' } | null>(null);
+    const [dividendToDelete, setDividendToDelete] = useState<Dividend | null>(null);
+    const [upcomingDividends, setUpcomingDividends] = useState<UpcomingDividend[]>([]);
+    const [isFetchingDividends, setIsFetchingDividends] = useState(false);
+    const [hasFetchedDividends, setHasFetchedDividends] = useState(false);
 
     
     const summaries = useMemo(() => {
@@ -139,10 +148,10 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
             if (!acc[inv.category]) acc[inv.category] = [];
             acc[inv.category].push(inv);
             return acc;
-        }, {} as Record<string, Investment[]>);
+        }, {} as Record<AssetCategory, Investment[]>);
 
         // Calculate summaries for each category
-        for (const category of Object.keys(investmentsByCategory)) {
+        for (const category of Object.keys(investmentsByCategory) as AssetCategory[]) {
             const categoryInvestments = investmentsByCategory[category];
             const invested = categoryInvestments.reduce((sum, inv) => sum + (inv.quantity * inv.costBasisPerUnit), 0);
             const currentValue = categoryInvestments.reduce((sum, inv) => sum + inv.currentValue, 0);
@@ -164,14 +173,21 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
         setDividendModalOpen(false);
     }
 
-    const handleConfirmDelete = () => {
-        if (!itemToDelete) return;
-        if (itemToDelete.type === 'transaction') {
-            removeTransaction(itemToDelete.id);
-        } else {
-            removeDividend(itemToDelete.id);
+    const handleConfirmDividendDelete = () => {
+        if (dividendToDelete) {
+            removeDividend(dividendToDelete.id);
+            setDividendToDelete(null);
         }
-        setItemToDelete(null);
+    };
+
+    const handleFetchUpcomingDividends = async () => {
+        setIsFetchingDividends(true);
+        setHasFetchedDividends(true);
+        // FIX: Replaced spread syntax `[...new Set(...)]` with `Array.from(new Set(...))` to ensure correct type inference of `string[]` for tickers, resolving potential issues in some TypeScript environments.
+        const tickers: string[] = Array.from(new Set(investments.map(inv => inv.ticker)));
+        const data = await fetchUpcomingDividends(tickers, fmpApiKey);
+        setUpcomingDividends(data);
+        setIsFetchingDividends(false);
     };
 
     const totalDividends = dividends.reduce((sum, d) => sum + d.amount, 0);
@@ -191,6 +207,14 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
                      <button onClick={() => setDividendModalOpen(true)} className={btnPrimaryClasses}>Add Dividend</button>
                 </div>
             </header>
+
+            <Card title="ASX Market Tracking Now Available!">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                    You can now track stocks from the Australian Stock Exchange (ASX). The Financial Modeling Prep API supports this market.
+                    <br />
+                    To add an ASX stock, please append the <strong className="text-gray-900 dark:text-white">.AX</strong> suffix to the ticker symbol. For example, use <strong className="font-mono text-indigo-400">CBA.AX</strong> for Commonwealth Bank.
+                </p>
+            </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {Object.keys(summaries).map((category) => {
@@ -221,33 +245,71 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
                 )})}
             </div>
 
+            <Card title="Upcoming Dividends (Next 90 Days)">
+                {!fmpApiKey ? (
+                    <ApiKeyWarning featureName="upcoming dividend checks" />
+                ) : (
+                    <>
+                        <div className="flex justify-center">
+                            <button
+                                onClick={handleFetchUpcomingDividends}
+                                className="flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:outline-none focus:ring-indigo-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                disabled={isFetchingDividends}
+                            >
+                                <CalendarDaysIcon className="h-5 w-5" />
+                                {isFetchingDividends ? 'Checking...' : 'Check for Upcoming Dividends'}
+                            </button>
+                        </div>
+                        {hasFetchedDividends && upcomingDividends.length > 0 && !isFetchingDividends && (
+                            <div className="overflow-x-auto mt-4">
+                                <table className="w-full text-left">
+                                    <thead className="text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-700/50">
+                                        <tr>
+                                            <th className="px-4 py-2">Ticker</th>
+                                            <th className="px-4 py-2 text-right">Est. Income</th>
+                                            <th className="px-4 py-2">Ex-Dividend Date</th>
+                                            <th className="px-4 py-2">Payment Date</th>
+                                            <th className="px-4 py-2 text-right">Dividend/Share</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                        {upcomingDividends.map((div, index) => {
+                                            const holding = investments.find(inv => inv.ticker === div.ticker);
+                                            const estimatedIncome = holding ? holding.quantity * div.amount : 0;
+                                            return (
+                                                <tr key={`${div.ticker}-${div.date}-${index}`} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                                    <td className="px-4 py-2 font-medium">{div.ticker}</td>
+                                                    <td className="px-4 py-2 text-right font-semibold text-green-400">{formatCurrency(estimatedIncome)}</td>
+                                                    <td className="px-4 py-2">{div.date}</td>
+                                                    <td className="px-4 py-2">{div.paymentDate}</td>
+                                                    <td className="px-4 py-2 text-right">{formatCurrency(div.amount)}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                        {hasFetchedDividends && upcomingDividends.length === 0 && !isFetchingDividends && (
+                            <p className="text-center text-gray-500 dark:text-gray-400 mt-4">
+                                No upcoming dividends found for your holdings in the next 90 days.
+                            </p>
+                        )}
+                         {!hasFetchedDividends && !isFetchingDividends && (
+                            <p className="text-center text-gray-500 dark:text-gray-400 mt-4">
+                                Click the button to check for upcoming dividends.
+                            </p>
+                        )}
+                    </>
+                )}
+            </Card>
+
             <Card title="Transaction History">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-700/50">
-                            <tr>
-                                <th className="px-4 py-2">Date</th><th className="px-4 py-2">Ticker</th><th className="px-4 py-2">Type</th>
-                                <th className="px-4 py-2 text-right">Quantity</th><th className="px-4 py-2 text-right">Price/Unit</th>
-                                <th className="px-4 py-2 text-right">Total Value</th><th className="px-4 py-2 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                            {transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(t => (
-                                <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                    <td className="px-4 py-2">{t.date}</td>
-                                    <td className="px-4 py-2 font-medium">{t.ticker}</td>
-                                    <td className={`px-4 py-2 capitalize font-semibold ${t.type === 'buy' ? 'text-green-400' : 'text-red-400'}`}>{t.type}</td>
-                                    <td className="px-4 py-2 text-right">{t.quantity.toLocaleString()}</td>
-                                    <td className="px-4 py-2 text-right">{formatCurrency(t.pricePerUnit)}</td>
-                                    <td className="px-4 py-2 text-right">{formatCurrency(t.quantity * t.pricePerUnit)}</td>
-                                    <td className="px-4 py-2 text-center">
-                                        <button onClick={() => setItemToDelete({ id: t.id, name: `${t.type.toUpperCase()} ${t.ticker}`, type: 'transaction' })} className={`${btnDangerClasses} w-auto text-xs py-1 px-2`}>Delete</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                <TransactionHistoryTable
+                    transactions={transactions}
+                    formatCurrency={formatCurrency}
+                    onDelete={removeTransaction}
+                />
             </Card>
 
             <Card title="Dividend History">
@@ -267,7 +329,7 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
                                     <td className="px-4 py-2 font-medium">{d.ticker}</td>
                                     <td className="px-4 py-2 text-right">{formatCurrency(d.amount)}</td>
                                     <td className="px-4 py-2 text-center">
-                                        <button onClick={() => setItemToDelete({ id: d.id, name: `Dividend for ${d.ticker}`, type: 'dividend' })} className={`${btnDangerClasses} w-auto text-xs py-1 px-2`}>Delete</button>
+                                        <button onClick={() => setDividendToDelete(d)} className={`${btnDangerClasses} w-auto text-xs py-1 px-2`}>Delete</button>
                                     </td>
                                 </tr>
                             ))}
@@ -280,11 +342,11 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
             {isDividendModalOpen && <DividendModal onSave={handleSaveDividend} onClose={() => setDividendModalOpen(false)} />}
             
             <ConfirmationModal
-                isOpen={!!itemToDelete}
-                onClose={() => setItemToDelete(null)}
-                onConfirm={handleConfirmDelete}
-                title={`Delete ${itemToDelete?.type}`}
-                message={`Are you sure you want to delete "${itemToDelete?.name}"? This action cannot be undone.`}
+                isOpen={!!dividendToDelete}
+                onClose={() => setDividendToDelete(null)}
+                onConfirm={handleConfirmDividendDelete}
+                title="Delete Dividend"
+                message={`Are you sure you want to delete the dividend for "${dividendToDelete?.ticker}"? This action cannot be undone.`}
             />
         </div>
     );

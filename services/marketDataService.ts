@@ -1,5 +1,6 @@
 // FIX: Add imports for new types
-import { CompanyProfile, StockNewsItem } from '../types';
+import { CompanyProfile, StockNewsItem, UpcomingDividend } from '../types';
+import moment from 'moment';
 
 export interface PriceData {
     symbol: string;
@@ -77,6 +78,43 @@ export const fetchStockNews = async (ticker: string, apiKey: string): Promise<St
         return Array.isArray(data) ? data : [];
     } catch (error) {
         console.error(`Error fetching stock news for ${ticker}:`, error);
+        return [];
+    }
+};
+
+export const fetchUpcomingDividends = async (tickers: string[], apiKey: string): Promise<UpcomingDividend[]> => {
+    if (!apiKey || tickers.length === 0) return [];
+
+    const fromDate = moment().format('YYYY-MM-DD');
+    const toDate = moment().add(90, 'days').format('YYYY-MM-DD');
+    const url = `https://financialmodelingprep.com/api/v3/stock_dividend_calendar?from=${fromDate}&to=${toDate}&apikey=${apiKey}`;
+    
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Failed to fetch dividend data from FMP.');
+        }
+        const data = await response.json();
+
+        if (!Array.isArray(data)) {
+            console.error('Unexpected dividend data format from FMP API:', data);
+            return [];
+        }
+
+        const userTickers = new Set(tickers);
+        const relevantDividends = data.filter(div => userTickers.has(div.symbol));
+
+        return relevantDividends.map((div: any) => ({
+            date: div.date,
+            ticker: div.symbol,
+            amount: div.dividend,
+            recordDate: div.recordDate,
+            paymentDate: div.paymentDate,
+            declarationDate: div.declarationDate,
+        }));
+
+    } catch (error) {
+        console.error('Error fetching upcoming dividends:', error);
         return [];
     }
 };

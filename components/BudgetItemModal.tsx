@@ -4,24 +4,26 @@ import { expenseCategories, incomeCategories } from '../data/categories';
 
 interface BudgetItemModalProps {
     item: BudgetItem | null;
-    onSave: (item: Omit<BudgetItem, 'id'> | BudgetItem) => void;
+    onSave: (item: Omit<BudgetItem, 'id'> | BudgetItem, scope?: 'one' | 'future', occurrenceDate?: string) => void;
     onClose: () => void;
     liabilities: Liability[];
+    onDelete?: (item: BudgetItem) => void;
+    defaultDate?: string;
     defaultType?: 'income' | 'expense';
+    occurrenceDate?: string;
 }
 
-const BudgetItemModal: React.FC<BudgetItemModalProps> = ({ item, onSave, onClose, liabilities, defaultType = 'expense' }) => {
+const BudgetItemModal: React.FC<BudgetItemModalProps> = ({ item, onSave, onClose, liabilities, onDelete, defaultDate, defaultType = 'expense', occurrenceDate }) => {
+    const isConfirmingInterest = !!(item && !item.id && item.name.startsWith('Est.'));
+
     const getInitialFormData = (): Omit<BudgetItem, 'id'> => {
-        // FIX: Determine the type correctly, prioritizing the existing item's type.
-        // This resolves the TypeScript error by ensuring `type` has the strict union type.
         const type = item?.type || defaultType;
         const defaults: Omit<BudgetItem, 'id'> = {
             name: '',
-            // Also fix a bug where category didn't respect the existing item's type.
             category: type === 'income' ? incomeCategories[0] : expenseCategories[0].items[0],
             amount: 0,
             type: type,
-            date: new Date().toISOString().split('T')[0],
+            date: defaultDate || new Date().toISOString().split('T')[0],
             isRecurring: false,
             recurringSettings: {
                 frequency: 'monthly',
@@ -32,6 +34,8 @@ const BudgetItemModal: React.FC<BudgetItemModalProps> = ({ item, onSave, onClose
              return {
                 ...defaults,
                 ...item,
+                name: isConfirmingInterest ? item.name.replace('Est. ', '') : item.name,
+                date: item.date,
                 recurringSettings: { ...defaults.recurringSettings, ...item.recurringSettings }
             };
         }
@@ -39,6 +43,8 @@ const BudgetItemModal: React.FC<BudgetItemModalProps> = ({ item, onSave, onClose
     };
     
     const [formData, setFormData] = useState<Omit<BudgetItem, 'id'>>(getInitialFormData);
+    const [updateScope, setUpdateScope] = useState<'one' | 'future'>('future');
+
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type: inputType } = e.target;
@@ -55,16 +61,11 @@ const BudgetItemModal: React.FC<BudgetItemModalProps> = ({ item, onSave, onClose
              const isCheckbox = inputType === 'checkbox';
              const isNumber = inputType === 'number';
              
-            // FIX: The property 'type' has a strict union type ('income' | 'expense').
-            // When using a computed property name `[name]` in the state update, TypeScript
-            // widens the type of `type` to a generic `string`, causing a type mismatch.
-            // This is fixed by handling the 'type' field as a special case to preserve its specific type.
             if (name === 'type') {
                 const newType = value as 'income' | 'expense';
                 setFormData(prev => ({
                     ...prev,
                     type: newType,
-                    // When type changes, also reset category to a valid default.
                     category: newType === 'income' ? incomeCategories[0] : expenseCategories[0].items[0],
                 }));
             } else {
@@ -78,19 +79,26 @@ const BudgetItemModal: React.FC<BudgetItemModalProps> = ({ item, onSave, onClose
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const dataToSave = item ? { ...formData, id: item.id } : formData;
-        onSave(dataToSave);
+        const dataToSave = (item && item.id) ? { ...formData, id: item.id } : formData;
+        onSave(dataToSave, item && item.isRecurring ? updateScope : undefined, occurrenceDate);
+    };
+
+    const handleDelete = () => {
+        if (item && item.id && onDelete) {
+            onDelete(item);
+        }
     };
     
     const labelClasses = "block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300";
     const inputClasses = "block w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-indigo-500 dark:focus:border-indigo-500";
     const btnPrimaryClasses = "text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:outline-none focus:ring-indigo-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800";
     const btnSecondaryClasses = "text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700";
+    const btnDangerClasses = "text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800";
 
     return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50" onClick={onClose}>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg" onClick={e => e.stopPropagation()}>
-                <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{item ? 'Edit' : 'Add'} Budget Item</h3>
+                <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{item && item.id ? 'Edit' : isConfirmingInterest ? 'Confirm Interest Expense' : 'Add'} Budget Item</h3>
                 <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -99,7 +107,7 @@ const BudgetItemModal: React.FC<BudgetItemModalProps> = ({ item, onSave, onClose
                         </div>
                         <div>
                             <label className={labelClasses}>Type</label>
-                            <select name="type" value={formData.type} onChange={handleChange} className={inputClasses} disabled={!!defaultType}>
+                            <select name="type" value={formData.type} onChange={handleChange} className={inputClasses} disabled={!!defaultType && !item}>
                                 <option value="expense">Expense</option>
                                 <option value="income">Income</option>
                             </select>
@@ -131,6 +139,28 @@ const BudgetItemModal: React.FC<BudgetItemModalProps> = ({ item, onSave, onClose
                         <input name="isRecurring" type="checkbox" checked={formData.isRecurring} onChange={handleChange} className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" id="isRecurring" />
                         <label htmlFor="isRecurring" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">Is this a recurring item?</label>
                     </div>
+
+                    {item && item.isRecurring && occurrenceDate && (
+                        <div className="p-4 bg-indigo-50 dark:bg-gray-700/50 rounded-lg">
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Apply Changes To:</h4>
+                            <div className="space-y-2">
+                                <div className="flex items-center">
+                                    <input id="scope-one" type="radio" value="one" name="updateScope" checked={updateScope === 'one'} onChange={(e) => setUpdateScope(e.target.value as 'one' | 'future')} className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"/>
+                                    <label htmlFor="scope-one" className="ml-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        This occurrence only
+                                        <span className="block text-xs text-gray-500 dark:text-gray-400">Creates a one-time exception for {occurrenceDate}.</span>
+                                    </label>
+                                </div>
+                                <div className="flex items-center">
+                                    <input id="scope-future" type="radio" value="future" name="updateScope" checked={updateScope === 'future'} onChange={(e) => setUpdateScope(e.target.value as 'one' | 'future')} className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"/>
+                                    <label htmlFor="scope-future" className="ml-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        This and all future occurrences
+                                        <span className="block text-xs text-gray-500 dark:text-gray-400">Ends the current series and starts a new one from {occurrenceDate}.</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {formData.isRecurring && (
                         <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg space-y-4">
@@ -183,9 +213,22 @@ const BudgetItemModal: React.FC<BudgetItemModalProps> = ({ item, onSave, onClose
                         </div>
                     )}
                     
-                    <div className="mt-6 flex justify-end space-x-4">
-                        <button type="button" onClick={onClose} className={`${btnSecondaryClasses} w-auto`}>Cancel</button>
-                        <button type="submit" className={`${btnPrimaryClasses} w-auto`}>Save</button>
+                    <div className="mt-6 flex justify-between items-center">
+                        <div>
+                            {item && item.id && onDelete && (
+                                <button
+                                    type="button"
+                                    onClick={handleDelete}
+                                    className={`${btnDangerClasses} w-auto`}
+                                >
+                                    Delete
+                                </button>
+                            )}
+                        </div>
+                        <div className="flex justify-end space-x-4">
+                            <button type="button" onClick={onClose} className={`${btnSecondaryClasses} w-auto`}>Cancel</button>
+                            <button type="submit" className={`${btnPrimaryClasses} w-auto`}>Save</button>
+                        </div>
                     </div>
                 </form>
             </div>

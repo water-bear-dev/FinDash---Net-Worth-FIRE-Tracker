@@ -39,7 +39,7 @@ export interface Liability {
 }
 
 export interface Transaction {
-    id: string;
+    id:string;
     ticker: string;
     category: AssetCategory;
     type: 'buy' | 'sell';
@@ -55,6 +55,15 @@ export interface Dividend {
     amount: number;
 }
 
+export interface UpcomingDividend {
+  date: string; // exDate
+  ticker: string;
+  amount: number;
+  recordDate: string;
+  paymentDate: string;
+  declarationDate: string | null;
+}
+
 export type RecurringFrequency = 'daily' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'yearly' | 'weekdays' | 'weekends' | 'custom';
 export type RecurringEndCondition = 'never' | 'date' | 'occurrences' | 'liability';
 
@@ -66,6 +75,7 @@ export interface RecurringSettings {
     endLiabilityId?: string;
     customInterval?: number;
     customUnit?: 'days' | 'weeks' | 'months' | 'years';
+    exceptionDates?: string[];
 }
 
 export interface BudgetItem {

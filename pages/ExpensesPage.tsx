@@ -12,8 +12,8 @@ interface ExpensesPageProps {
     budgetItems: BudgetItem[];
     liabilities: Liability[];
     addBudgetItem: (item: Omit<BudgetItem, 'id'>) => void;
-    updateBudgetItem: (item: BudgetItem) => void;
-    removeBudgetItem: (id: string) => void;
+    updateBudgetItem: (item: BudgetItem, scope?: 'one' | 'future', occurrenceDate?: string) => void;
+    removeBudgetItem: (item: BudgetItem, scope?: 'one' | 'future', occurrenceDate?: string) => void;
     formatCurrency: (value: number) => string;
 }
 
@@ -27,8 +27,8 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
 }) => {
     const [currentMonth, setCurrentMonth] = useState(moment());
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingItem, setEditingItem] = useState<BudgetItem | null>(null);
-    const [itemToDelete, setItemToDelete] = useState<BudgetItem | null>(null);
+    const [editingItem, setEditingItem] = useState<(BudgetItem & { occurrenceDate?: string }) | null>(null);
+    const [itemToDelete, setItemToDelete] = useState<{ item: BudgetItem; occurrenceDate: string; isRecurring: boolean; } | null>(null);
 
     const monthlyExpenseEvents = useMemo(() => {
         const start = currentMonth.clone().startOf('month').toDate();
@@ -56,9 +56,10 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
     };
 
     const openEditModal = (item: BudgetItem) => {
+        // item is the occurrence, with the specific date
         const originalItem = budgetItems.find(i => i.id === (item.originalId || item.id));
         if (originalItem) {
-            setEditingItem(originalItem);
+            setEditingItem({ ...originalItem, occurrenceDate: item.date });
             setIsModalOpen(true);
         }
     };
@@ -66,7 +67,7 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
     const handleDeleteClick = (item: BudgetItem) => {
         const originalItem = budgetItems.find(i => i.id === (item.originalId || item.id));
         if (originalItem) {
-            setItemToDelete(originalItem);
+             setItemToDelete({ item: originalItem, occurrenceDate: item.date, isRecurring: originalItem.isRecurring });
         }
     };
 
@@ -75,19 +76,19 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
         setEditingItem(null);
     };
 
-    const handleSave = (item: Omit<BudgetItem, 'id'> | BudgetItem) => {
+    const handleSave = (item: Omit<BudgetItem, 'id'> | BudgetItem, scope?: 'one' | 'future', occurrenceDate?: string) => {
         const itemToSave = { ...item, type: 'expense' as const };
         if ('id' in itemToSave && itemToSave.id) {
-            updateBudgetItem(itemToSave);
+            updateBudgetItem(itemToSave, scope, occurrenceDate);
         } else {
             addBudgetItem(itemToSave);
         }
         closeModal();
     };
 
-    const handleConfirmDelete = () => {
+    const handleConfirmDelete = (scope?: 'one' | 'future') => {
         if (itemToDelete) {
-            removeBudgetItem(itemToDelete.id);
+            removeBudgetItem(itemToDelete.item, scope, itemToDelete.occurrenceDate);
             setItemToDelete(null);
         }
     };
@@ -154,8 +155,8 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
                                     <td className="px-4 py-2 text-right font-semibold text-red-400">{formatCurrency(item.amount)}</td>
                                     <td className="px-4 py-2 text-center">
                                         <div className="flex justify-center items-center space-x-2">
-                                            <button onClick={() => openEditModal(item)} className={`${btnSecondaryClasses} w-auto text-xs py-1 px-2`}>Edit Source</button>
-                                            <button onClick={() => handleDeleteClick(item)} className={`${btnDangerClasses} w-auto text-xs py-1 px-2`}>Delete Source</button>
+                                            <button onClick={() => openEditModal(item)} className={`${btnSecondaryClasses} w-auto text-xs py-1 px-2`}>Edit</button>
+                                            <button onClick={() => handleDeleteClick(item)} className={`${btnDangerClasses} w-auto text-xs py-1 px-2`}>Delete</button>
                                         </div>
                                     </td>
                                 </tr>
@@ -168,14 +169,16 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
                 </div>
             </Card>
 
-            {isModalOpen && <BudgetItemModal item={editingItem} onSave={handleSave} onClose={closeModal} liabilities={liabilities} defaultType="expense" />}
+            {isModalOpen && <BudgetItemModal item={editingItem} onSave={handleSave} onClose={closeModal} liabilities={liabilities} occurrenceDate={editingItem?.occurrenceDate} defaultType="expense" />}
 
             <ConfirmationModal
                 isOpen={!!itemToDelete}
                 onClose={() => setItemToDelete(null)}
                 onConfirm={handleConfirmDelete}
-                title="Delete Expense Source"
-                message={`Are you sure you want to delete the recurring source "${itemToDelete?.name}"? This will remove all of its future occurrences.`}
+                title="Delete Expense"
+                message={itemToDelete?.isRecurring ? `You are deleting an occurrence of a recurring expense.` : `Are you sure you want to delete "${itemToDelete?.item.name}"?`}
+                showScopeOptions={itemToDelete?.isRecurring}
+                occurrenceDate={itemToDelete?.occurrenceDate}
             />
         </div>
     );
