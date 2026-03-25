@@ -77,6 +77,17 @@ To unlock the full power of the dashboard, you need to configure a few settings 
     *   In **Settings**, set your **Target Annual Spending** (this drives the FIRE progress calculations).
     *   Set your preferred **Currency** (e.g., USD, AUD, EUR).
 
-## 🛡️ Privacy Note
+## 🛡️ Privacy & Data Portability
 
 This application is designed with privacy first. **All your financial data is stored locally in your browser's LocalStorage.** No personal financial data is ever sent to a remote server or database managed by this project. API calls are made directly from your browser to the data providers (FMP).
+
+### Data Backup & Migration (Export / Import)
+Since there is no centralized database, your data does not automatically sync across devices. To migrate your data (e.g., from your laptop to your phone) or create a safe backup:
+1. Go to **Settings**.
+2. Scroll down to **Data Backup & Restore**.
+3. Click **Export Backup (JSON)** to download your current data.
+4. On your new device, click **Import Backup** and select the `.json` file. Your browser will instantly load your data.
+
+**Technical Specifications & Considerations:**
+*   **Storage Limits**: Your browser's LocalStorage typically has a limit of around 5MB. Because FinDash only stores text/JSON data, it is extremely difficult to hit this limit through normal usage, ensuring years of seamless tracking.
+*   **Security**: The exported `.json` backup file is **unencrypted plain text**. It contains all your detailed financial data. Please ensure you store this exported file securely on your local device or inside an encrypted vault/password manager.
