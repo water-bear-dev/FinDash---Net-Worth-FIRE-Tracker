@@ -32,6 +32,7 @@ graph TD
 
 ### 3.2 State & Persistence Layer
 - **Local Persistence**: `useLocalStorage` hook synchronizes the React state with `window.localStorage`.
+- **Automated Directory Sync**: Leverages the HTML5 File System Access API and IndexedDB to persist a `FileSystemDirectoryHandle`. A background `setInterval` in `App.tsx` silently attempts to write an hourly JSON backup to a connected local directory (e.g. Google Drive synced folder).
 - **Derived State Engine**: Heavy use of `useMemo` to aggregate net worth and portfolio metrics from raw transaction ledgers on-the-fly.
 - **Data Model**: Atomic, ledger-based transaction history instead of snapshot-based holdings.
 - **Algorithmic Rebalancing Engine**: A pure utility function that computes the exact buy/sell monetary differences needed to align a user's current holdings with a target allocation percentage array.

@@ -25,6 +25,11 @@ Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your bro
 *   **📅 Financial Calendar**: A visual calendar view of your month. See exactly when bills are due, when income arrives, and when dividends are paid.
 *   **🔎 Market Research**: Look up company profiles, financial news, and stock metrics directly within the app.
 *   **🌗 Theming**: Fully responsive design with native Dark and Light modes.
+*   **☁️ Data Portability & Automated Sync**: 
+    *   **Zero-Knowledge Architecture**: All data lives strictly in your browser (`localStorage`). No external databases.
+    *   **Automated Backups**: Connect a local folder (like your Google Drive desktop folder) and FinDash will silently back up your complete profile to a JSON file every hour.
+    *   **CSV Exports**: Export tabular data for transactions and budgets for use in Excel or other tools.
+    *   **Full JSON Import/Export**: Instantly transfer your profile to a new device.
 
 ## 🛠️ Tech Stack
 

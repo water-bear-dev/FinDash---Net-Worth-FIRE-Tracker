@@ -1,8 +1,11 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { UserProfile } from '../types';
+import { UserProfile, Transaction, BudgetItem } from '../types';
 import Card from '../components/Card';
+import { exportTransactionsToCSV, exportBudgetToCSV } from '../services/exportService';
+import { getDirectoryHandle, saveDirectoryHandle, syncDataToDirectory, verifyPermission } from '../services/syncService';
+import moment from 'moment';
 
 interface SettingsPageProps {
     userProfile: UserProfile;
@@ -29,11 +32,23 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     const [apiKey, setApiKey] = useState(fmpApiKey);
     const [spending, setSpending] = useState(targetAnnualSpending);
     const [currentCurrency, setCurrentCurrency] = useState(currency);
+    const [syncDirName, setSyncDirName] = useState<string | null>(null);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [lastSyncTime, setLastSyncTime] = useState<string | null>(window.localStorage.getItem('lastSyncTime'));
 
     useEffect(() => { setProfile(userProfile); }, [userProfile]);
     useEffect(() => { setApiKey(fmpApiKey); }, [fmpApiKey]);
     useEffect(() => { setSpending(targetAnnualSpending); }, [targetAnnualSpending]);
     useEffect(() => { setCurrentCurrency(currency); }, [currency]);
+
+    useEffect(() => {
+        // Check if we have a saved directory handle
+        getDirectoryHandle().then(handle => {
+            if (handle) {
+                setSyncDirName(handle.name);
+            }
+        }).catch(console.error);
+    }, []);
 
     const handleProfileSubmit = (e: React.FormEvent) => { e.preventDefault(); saveUserProfile(profile); alert('Profile saved!'); };
     const handleApiSubmit = (e: React.FormEvent) => { e.preventDefault(); saveFmpApiKey(apiKey); alert('API Key saved!'); };
@@ -96,6 +111,79 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             e.target.value = '';
         };
         reader.readAsText(file);
+    };
+
+    const handleExportTransactionsCSV = () => {
+        const transactionsStr = window.localStorage.getItem('transactions');
+        if (transactionsStr) {
+            exportTransactionsToCSV(JSON.parse(transactionsStr) as Transaction[]);
+        } else {
+            alert('No transactions found to export.');
+        }
+    };
+
+    const handleExportBudgetCSV = () => {
+        const budgetStr = window.localStorage.getItem('budgetItems');
+        if (budgetStr) {
+            exportBudgetToCSV(JSON.parse(budgetStr) as BudgetItem[]);
+        } else {
+            alert('No budget items found to export.');
+        }
+    };
+
+    const handleSelectSyncDirectory = async () => {
+        try {
+            // @ts-ignore
+            const directoryHandle = await window.showDirectoryPicker({
+                mode: 'readwrite'
+            });
+            await saveDirectoryHandle(directoryHandle);
+            setSyncDirName(directoryHandle.name);
+            alert(`Successfully connected to folder: ${directoryHandle.name}`);
+        } catch (error) {
+            console.error('Error selecting directory:', error);
+            // User probably cancelled the prompt
+        }
+    };
+
+    const handleSyncNow = async () => {
+        setIsSyncing(true);
+        try {
+            const handle = await getDirectoryHandle();
+            if (!handle) {
+                alert('Please select a sync directory first.');
+                setIsSyncing(false);
+                return;
+            }
+
+            // Gather full backup JSON
+            const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'fmpApiKey', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
+            const exportData: Record<string, any> = {};
+            keysToExport.forEach(key => {
+                const item = window.localStorage.getItem(key);
+                if (item) {
+                    try { exportData[key] = JSON.parse(item); } 
+                    catch (e) { exportData[key] = item; }
+                }
+            });
+
+            const jsonString = JSON.stringify(exportData, null, 2);
+            const success = await syncDataToDirectory(handle, 'findash-sync.json', jsonString);
+
+            if (success) {
+                const time = moment().format('YYYY-MM-DD HH:mm:ss');
+                setLastSyncTime(time);
+                window.localStorage.setItem('lastSyncTime', time);
+                alert('Sync completed successfully!');
+            } else {
+                alert('Sync failed. Please ensure you have granted browser permissions to the folder.');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('An error occurred during sync.');
+        } finally {
+            setIsSyncing(false);
+        }
     };
     
     const inputClasses = "block w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-indigo-500 dark:focus:border-indigo-500";
@@ -170,27 +258,83 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                 </form>
             </Card>
 
-            <Card title="Data Backup & Restore">
+            <Card title="Data Backup & Export">
+                <div className="space-y-6 text-sm text-gray-600 dark:text-gray-400">
+                    <div>
+                        <h4 className="font-semibold text-gray-900 dark:text-white mb-2">CSV Exports</h4>
+                        <p className="mb-3">Download your tabular data for use in Excel, Google Sheets, or other tools.</p>
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <button type="button" onClick={handleExportTransactionsCSV} className={`${btnSecondaryClasses} w-full sm:w-auto`}>
+                                Export Transactions
+                            </button>
+                            <button type="button" onClick={handleExportBudgetCSV} className={`${btnSecondaryClasses} w-full sm:w-auto`}>
+                                Export Budget Items
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                        <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Full System Backup (JSON)</h4>
+                        <p className="mb-3">Export all application data including settings to a single file, or import an existing backup.</p>
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <button type="button" onClick={handleExport} className={`${btnSecondaryClasses} w-full sm:w-auto`}>
+                                Export Full Backup
+                            </button>
+                            
+                            <div className="relative w-full sm:w-auto">
+                                <input 
+                                    type="file" 
+                                    accept=".json" 
+                                    onChange={handleImport} 
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    title="Import Backup"
+                                />
+                                <button type="button" className={`${btnSecondaryClasses} w-full sm:w-auto`}>
+                                    Import Backup
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Card>
+
+            <Card title="Automated Directory Sync">
                 <div className="space-y-4 text-sm text-gray-600 dark:text-gray-400">
                     <p>
-                        Since FinDash stores all your data locally in your browser to protect your privacy, you can use these tools to move your data to another device or create a safe backup.
+                        Select a folder on your computer (e.g., a Google Drive desktop sync folder, iCloud Drive, or Dropbox folder). FinDash will save an up-to-date <code>findash-sync.json</code> file to this location.
                     </p>
-                    <div className="flex flex-col sm:flex-row gap-4 pt-2">
-                        <button type="button" onClick={handleExport} className={`${btnSecondaryClasses} w-full sm:w-auto`}>
-                            Export Backup (JSON)
-                        </button>
-                        
-                        <div className="relative w-full sm:w-auto">
-                            <input 
-                                type="file" 
-                                accept=".json" 
-                                onChange={handleImport} 
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                title="Import Backup"
-                            />
-                            <button type="button" className={`${btnSecondaryClasses} w-full sm:w-auto`}>
-                                Import Backup
-                            </button>
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                        * Note: This uses the File System Access API. Your browser may occasionally ask you to re-verify permissions for security reasons.
+                    </p>
+
+                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <span className="font-medium text-gray-900 dark:text-white">Active Sync Folder: </span>
+                                {syncDirName ? (
+                                    <span className="text-green-600 dark:text-green-400 font-mono">{syncDirName}</span>
+                                ) : (
+                                    <span className="text-gray-500">None Selected</span>
+                                )}
+                                {lastSyncTime && (
+                                    <p className="text-xs mt-1">Last synced: {lastSyncTime}</p>
+                                )}
+                            </div>
+                            <div className="flex gap-2 w-full sm:w-auto">
+                                <button type="button" onClick={handleSelectSyncDirectory} className={btnSecondaryClasses}>
+                                    {syncDirName ? 'Change Folder' : 'Select Folder'}
+                                </button>
+                                {syncDirName && (
+                                    <button 
+                                        type="button" 
+                                        onClick={handleSyncNow} 
+                                        disabled={isSyncing}
+                                        className={`${btnPrimaryClasses} ${isSyncing ? 'opacity-50 cursor-wait' : ''}`}
+                                    >
+                                        {isSyncing ? 'Syncing...' : 'Sync Now'}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

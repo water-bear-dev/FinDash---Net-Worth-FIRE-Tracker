@@ -141,6 +141,51 @@ const App: React.FC = () => {
 
     const [isPricesLoading, setIsPricesLoading] = useState(false);
 
+    // Background Auto Sync
+    useEffect(() => {
+        const attemptSync = async () => {
+            try {
+                // Dynamic import to avoid strict dependency if running in non-browser env
+                const { getDirectoryHandle, syncDataToDirectory } = await import('./services/syncService');
+                const handle = await getDirectoryHandle();
+                if (!handle) return;
+
+                // Gather full backup JSON
+                const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'fmpApiKey', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
+                const exportData: Record<string, any> = {};
+                keysToExport.forEach(key => {
+                    const item = window.localStorage.getItem(key);
+                    if (item) {
+                        try { exportData[key] = JSON.parse(item); } 
+                        catch (e) { exportData[key] = item; }
+                    }
+                });
+
+                const jsonString = JSON.stringify(exportData, null, 2);
+                
+                // Silent sync attempt (won't prompt the user if permission is missing, will just fail silently)
+                const success = await syncDataToDirectory(handle, 'findash-sync.json', jsonString, true);
+                if (success) {
+                    const time = moment().format('YYYY-MM-DD HH:mm:ss');
+                    window.localStorage.setItem('lastSyncTime', time);
+                    console.log(`[AutoSync] Background sync successful at ${time}`);
+                }
+            } catch (err) {
+                console.error('[AutoSync] Background sync failed:', err);
+            }
+        };
+
+        // Attempt sync on initial load
+        attemptSync();
+
+        // Attempt sync every hour (3600000 ms)
+        const intervalId = setInterval(attemptSync, 3600000);
+        return () => clearInterval(intervalId);
+    }, [
+        // Re-run the effect if core data changes significantly, or just rely on interval?
+        // Let's rely on the interval and initial load to avoid aggressive write cycles.
+    ]);
+
     // Derived state for investments (holdings)
     const holdings = useMemo<Omit<Investment, 'currentValue'>[]>(() => {
         const holdingsMap = new Map<string, { quantity: number; totalCost: number; category: AssetCategory }>();
