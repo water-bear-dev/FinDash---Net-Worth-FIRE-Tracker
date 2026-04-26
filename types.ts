@@ -142,3 +142,8 @@ export interface FireSettings {
     taxRate: number; // e.g. 15.0
     simulationYears: number; // e.g. 30
 }
+
+export interface HistoricalNetWorth {
+    date: string; // YYYY-MM
+    netWorth: number;
+}

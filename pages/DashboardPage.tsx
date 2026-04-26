@@ -1,10 +1,12 @@
 import React from 'react';
-import { CashAccount, Investment, Property, AssetCategory } from '../types';
+import { HistoricalNetWorth, CashAccount, Investment, Property, AssetCategory } from '../types';
 import Card from '../components/Card';
 import AllocationDonutChart from '../components/AllocationDonutChart';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Treemap } from 'recharts';
 
 interface DashboardPageProps {
     netWorth: number;
+    historicalNetWorth: HistoricalNetWorth[];
     totalAssets: number;
     totalLiabilities: number;
     fireData: { targetAnnualSpending: number; monthlySavings: number; };
@@ -21,6 +23,7 @@ interface DashboardPageProps {
 
 const DashboardPage: React.FC<DashboardPageProps> = ({
     netWorth,
+    historicalNetWorth,
     totalAssets,
     totalLiabilities,
     fireData,
@@ -54,8 +57,32 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         }));
 
     }, [holdings, cashAccounts, properties]);
+
+    // Format data for Treemap
+    const treemapData = React.useMemo(() => {
+        const children = allocationData.map(item => ({
+            name: item.name,
+            size: item.value
+        }));
+        return [{ name: 'Portfolio', children }];
+    }, [allocationData]);
     
     const savingsRate = monthlyIncome > 0 ? (budgetSummary.netMonthlySavings / monthlyIncome) * 100 : 0;
+
+    // Custom Tooltip for LineChart
+    const CustomLineTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 shadow-lg rounded-lg">
+                    <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">{label}</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                        {formatCurrency(payload[0].value)}
+                    </p>
+                </div>
+            );
+        }
+        return null;
+    };
 
     return (
         <main className="space-y-6">
@@ -109,6 +136,67 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
              <Card title="Asset Allocation">
                 <AllocationDonutChart data={allocationData} formatCurrency={formatCurrency} />
             </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card title="Historical Net Worth">
+                    {historicalNetWorth.length > 0 ? (
+                        <div className="h-64 mt-4">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={historicalNetWorth}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} vertical={false} />
+                                    <XAxis 
+                                        dataKey="date" 
+                                        stroke="#6B7280" 
+                                        fontSize={12} 
+                                        tickLine={false} 
+                                        axisLine={false} 
+                                    />
+                                    <YAxis 
+                                        stroke="#6B7280" 
+                                        fontSize={12} 
+                                        tickLine={false} 
+                                        axisLine={false} 
+                                        tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} 
+                                    />
+                                    <RechartsTooltip content={<CustomLineTooltip />} />
+                                    <Line 
+                                        type="monotone" 
+                                        dataKey="netWorth" 
+                                        stroke="#6366f1" 
+                                        strokeWidth={3} 
+                                        dot={{ r: 4, strokeWidth: 2 }} 
+                                        activeDot={{ r: 6, strokeWidth: 0 }} 
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
+                            Not enough historical data to display.
+                        </div>
+                    )}
+                </Card>
+
+                <Card title="Portfolio Treemap Heatmap">
+                    <div className="h-64 mt-4 relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <Treemap
+                                data={treemapData}
+                                dataKey="size"
+                                stroke="#fff"
+                                fill="#818cf8"
+                                animationDuration={800}
+                                animationEasing="ease-out"
+                            >
+                                <RechartsTooltip 
+                                    formatter={(value: number) => formatCurrency(value)} 
+                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} 
+                                />
+                            </Treemap>
+                        </ResponsiveContainer>
+                    </div>
+                </Card>
+            </div>
         </main>
     );
 };

@@ -137,6 +137,7 @@ const App: React.FC = () => {
     const [currency, setCurrency] = useLocalStorage<string>('currency', 'USD');
     const [theme, setTheme] = useLocalStorage<string>('theme', 'dark');
     const [targetAllocations, setTargetAllocations] = useLocalStorage<TargetAllocation[]>('targetAllocations', []);
+    const [historicalNetWorth, setHistoricalNetWorth] = useLocalStorage<HistoricalNetWorth[]>('historicalNetWorth', []);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     const [isPricesLoading, setIsPricesLoading] = useState(false);
@@ -370,6 +371,29 @@ const App: React.FC = () => {
     const totalLiabilities = useMemo(() => liabilities.reduce((sum, lia) => sum + lia.outstandingBalance, 0), [liabilities]);
     const netWorth = totalAssets - totalLiabilities;
     
+    // Automatically track Historical Net Worth for the current month
+    useEffect(() => {
+        // Wait until prices are loaded so we don't save a 0 net worth
+        if (isPricesLoading || investments.length === 0 && cashAccounts.length === 0) return;
+
+        const currentMonth = moment().format('YYYY-MM');
+        setHistoricalNetWorth(prev => {
+            const existingEntryIndex = prev.findIndex(entry => entry.date === currentMonth);
+            if (existingEntryIndex >= 0) {
+                // Update current month if value changed significantly to avoid excessive writes
+                if (Math.abs(prev[existingEntryIndex].netWorth - netWorth) > 10) {
+                    const newHistory = [...prev];
+                    newHistory[existingEntryIndex] = { date: currentMonth, netWorth };
+                    return newHistory;
+                }
+                return prev;
+            } else {
+                // Add new month
+                return [...prev, { date: currentMonth, netWorth }];
+            }
+        });
+    }, [netWorth, isPricesLoading, investments.length, cashAccounts.length, setHistoricalNetWorth]);
+
     const budgetSummary = useMemo(() => {
         const start = moment().startOf('month').toDate();
         const end = moment().endOf('month').toDate();
@@ -398,7 +422,7 @@ const App: React.FC = () => {
 
     return (
         <Router>
-            <div className={`flex h-screen bg-gray-100 dark:bg-gray-900 ${theme}`}>
+            <div className={`flex h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-indigo-950 ${theme}`}>
                 <Sidebar isCollapsed={isSidebarCollapsed} />
                 <div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'ml-0 sm:ml-20' : 'ml-0 sm:ml-64'}`}>
                     <TopBar theme={theme} toggleTheme={toggleTheme} userName={userProfile.name} toggleSidebar={toggleSidebar} />
@@ -407,6 +431,7 @@ const App: React.FC = () => {
                             <Route path="/" element={
                                 <DashboardPage
                                     netWorth={netWorth}
+                                    historicalNetWorth={historicalNetWorth}
                                     totalAssets={totalAssets}
                                     totalLiabilities={totalLiabilities}
                                     fireData={{ targetAnnualSpending, monthlySavings: budgetSummary.netMonthlySavings }}

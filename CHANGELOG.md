@@ -5,6 +5,11 @@ All notable changes to the **FinDash** project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Phase 5: Premium UI & Data Visualization**:
+  - **Glassmorphism Overhaul**: Transformed the primary UI cards with `backdrop-blur` and translucent backgrounds for a modern look.
+  - **Micro-animations**: Integrated `framer-motion` for buttery smooth spring transitions on hover states.
+  - **Historical Net Worth Chart**: Added automated, month-by-month Net Worth tracking visualized via a `recharts` line chart on the dashboard.
+  - **Asset Allocation Heatmap**: Introduced a new `Treemap` visualization on the dashboard to visualize proportional portfolio sizes.
 - **Data Portability & Sync**:
   - Export capabilities for Transactions and Budget Items to tabular CSV format.
   - Integration with the File System Access API to connect a local folder (e.g., Google Drive Desktop folder) as an "Always True" sync directory.

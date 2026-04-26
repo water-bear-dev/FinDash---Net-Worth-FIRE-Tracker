@@ -22,7 +22,10 @@ Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your bro
 *   **💰 Budgeting Engine**: 
     *   Manage recurring Incomes and Expenses (e.g., salary, rent, subscriptions).
     *   Smart projections: Automatically generates future financial events based on your recurring settings.
-*   **📅 Financial Calendar**: A visual calendar view of your month. See exactly when bills are due, when income arrives, and when dividends are paid.
+*   **📊 Comprehensive Data Visualization**: 
+    *   **Historical Net Worth Tracking**: Automatically records your net worth monthly, visualized via a dynamic Line Chart.
+    *   **Asset Allocation Heatmap**: An interactive Treemap that visualizes the proportion of your entire portfolio.
+    *   **Financial Calendar**: A visual calendar view of your month. See exactly when bills are due, when income arrives, and when dividends are paid.
 *   **🔎 Market Research**: Look up company profiles, financial news, and stock metrics directly within the app.
 *   **🌗 Theming**: Fully responsive design with native Dark and Light modes.
 *   **☁️ Data Portability & Automated Sync**: 
