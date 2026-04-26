@@ -55,14 +55,6 @@ export interface Dividend {
     amount: number;
 }
 
-export interface UpcomingDividend {
-  date: string; // exDate
-  ticker: string;
-  amount: number;
-  recordDate: string;
-  paymentDate: string;
-  declarationDate: string | null;
-}
 
 export type RecurringFrequency = 'daily' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'yearly' | 'weekdays' | 'weekends' | 'custom';
 export type RecurringEndCondition = 'never' | 'date' | 'occurrences' | 'liability';
@@ -104,30 +96,6 @@ export interface FinancialEvent {
     resource: {
         type: 'income' | 'expense' | 'transaction' | 'dividend';
     };
-}
-// FIX: Add CompanyProfile and StockNewsItem interfaces
-export interface CompanyProfile {
-    symbol: string;
-    price: number;
-    companyName: string;
-    image: string;
-    description: string;
-    website: string;
-    mktCap: number;
-    sector: string;
-    industry: string;
-    range: string;
-    volAvg: number;
-    ceo: string;
-}
-
-export interface StockNewsItem {
-    url: string;
-    image: string;
-    title: string;
-    site: string;
-    publishedDate: string;
-    text: string;
 }
 
 export interface TargetAllocation {

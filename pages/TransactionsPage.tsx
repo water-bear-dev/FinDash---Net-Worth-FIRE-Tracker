@@ -17,7 +17,7 @@ interface TransactionsPageProps {
     addDividend: (dividend: Omit<Dividend, 'id'>) => void;
     removeDividend: (id: string) => void;
     formatCurrency: (value: number) => string;
-    fmpApiKey: string;
+    avApiKey: string;
 }
 
 const TransactionModal: React.FC<{
@@ -130,14 +130,11 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
     addDividend,
     removeDividend,
     formatCurrency,
-    fmpApiKey
+    avApiKey,
 }) => {
     const [isTransactionModalOpen, setTransactionModalOpen] = useState(false);
     const [isDividendModalOpen, setDividendModalOpen] = useState(false);
     const [dividendToDelete, setDividendToDelete] = useState<Dividend | null>(null);
-    const [upcomingDividends, setUpcomingDividends] = useState<UpcomingDividend[]>([]);
-    const [isFetchingDividends, setIsFetchingDividends] = useState(false);
-    const [hasFetchedDividends, setHasFetchedDividends] = useState(false);
 
     
     const summaries = useMemo(() => {
@@ -180,15 +177,6 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
         }
     };
 
-    const handleFetchUpcomingDividends = async () => {
-        setIsFetchingDividends(true);
-        setHasFetchedDividends(true);
-        // FIX: Replaced spread syntax `[...new Set(...)]` with `Array.from(new Set(...))` to ensure correct type inference of `string[]` for tickers, resolving potential issues in some TypeScript environments.
-        const tickers: string[] = Array.from(new Set(investments.map(inv => inv.ticker)));
-        const data = await fetchUpcomingDividends(tickers, fmpApiKey);
-        setUpcomingDividends(data);
-        setIsFetchingDividends(false);
-    };
 
     const totalDividends = dividends.reduce((sum, d) => sum + d.amount, 0);
 
@@ -199,8 +187,8 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
         <div className="space-y-6">
             <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Investment & Trading</h1>
-                    <p className="text-gray-500 dark:text-gray-400">Log your buy/sell transactions and dividend income.</p>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Portfolio Dashboard</h1>
+                    <p className="text-gray-500 dark:text-gray-400">Track your investment performance and dividend income.</p>
                 </div>
                 <div className="flex items-center space-x-2">
                      <button onClick={() => setTransactionModalOpen(true)} className={btnPrimaryClasses}>Add Transaction</button>
@@ -208,13 +196,6 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
                 </div>
             </header>
 
-            <Card title="ASX Market Tracking Now Available!">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                    You can now track stocks from the Australian Stock Exchange (ASX). The Financial Modeling Prep API supports this market.
-                    <br />
-                    To add an ASX stock, please append the <strong className="text-gray-900 dark:text-white">.AX</strong> suffix to the ticker symbol. For example, use <strong className="font-mono text-indigo-400">CBA.AX</strong> for Commonwealth Bank.
-                </p>
-            </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {Object.keys(summaries).map((category) => {
@@ -245,64 +226,6 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
                 )})}
             </div>
 
-            <Card title="Upcoming Dividends (Next 90 Days)">
-                {!fmpApiKey ? (
-                    <ApiKeyWarning featureName="upcoming dividend checks" />
-                ) : (
-                    <>
-                        <div className="flex justify-center">
-                            <button
-                                onClick={handleFetchUpcomingDividends}
-                                className="flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:outline-none focus:ring-indigo-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                disabled={isFetchingDividends}
-                            >
-                                <CalendarDaysIcon className="h-5 w-5" />
-                                {isFetchingDividends ? 'Checking...' : 'Check for Upcoming Dividends'}
-                            </button>
-                        </div>
-                        {hasFetchedDividends && upcomingDividends.length > 0 && !isFetchingDividends && (
-                            <div className="overflow-x-auto mt-4">
-                                <table className="w-full text-left">
-                                    <thead className="text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-700/50">
-                                        <tr>
-                                            <th className="px-4 py-2">Ticker</th>
-                                            <th className="px-4 py-2 text-right">Est. Income</th>
-                                            <th className="px-4 py-2">Ex-Dividend Date</th>
-                                            <th className="px-4 py-2">Payment Date</th>
-                                            <th className="px-4 py-2 text-right">Dividend/Share</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                        {upcomingDividends.map((div, index) => {
-                                            const holding = investments.find(inv => inv.ticker === div.ticker);
-                                            const estimatedIncome = holding ? holding.quantity * div.amount : 0;
-                                            return (
-                                                <tr key={`${div.ticker}-${div.date}-${index}`} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                                    <td className="px-4 py-2 font-medium">{div.ticker}</td>
-                                                    <td className="px-4 py-2 text-right font-semibold text-green-400">{formatCurrency(estimatedIncome)}</td>
-                                                    <td className="px-4 py-2">{div.date}</td>
-                                                    <td className="px-4 py-2">{div.paymentDate}</td>
-                                                    <td className="px-4 py-2 text-right">{formatCurrency(div.amount)}</td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                        {hasFetchedDividends && upcomingDividends.length === 0 && !isFetchingDividends && (
-                            <p className="text-center text-gray-500 dark:text-gray-400 mt-4">
-                                No upcoming dividends found for your holdings in the next 90 days.
-                            </p>
-                        )}
-                         {!hasFetchedDividends && !isFetchingDividends && (
-                            <p className="text-center text-gray-500 dark:text-gray-400 mt-4">
-                                Click the button to check for upcoming dividends.
-                            </p>
-                        )}
-                    </>
-                )}
-            </Card>
 
             <Card title="Transaction History">
                 <TransactionHistoryTable

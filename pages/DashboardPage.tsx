@@ -18,7 +18,7 @@ interface DashboardPageProps {
     refreshPrices: () => void;
     isPricesLoading: boolean;
     formatCurrency: (value: number) => string;
-    fmpApiKey: string;
+    avApiKey: string;
 }
 
 const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -35,7 +35,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     refreshPrices,
     isPricesLoading,
     formatCurrency,
-    fmpApiKey
+    avApiKey
 }) => {
 
     const allocationData = React.useMemo(() => {

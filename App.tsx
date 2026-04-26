@@ -9,7 +9,6 @@ import ExpensesPage from './pages/ExpensesPage';
 import CalendarPage from './pages/CalendarPage';
 import SettingsPage from './pages/SettingsPage';
 import IncomesPage from './pages/IncomesPage';
-import MarketResearchPage from './pages/MarketResearchPage';
 import FIREPage from './pages/FIREPage';
 import InvestmentsPage from './pages/InvestmentsPage';
 import { 
@@ -125,7 +124,7 @@ const App: React.FC = () => {
     const [dividends, setDividends] = useLocalStorage<Dividend[]>('dividends', sampleDividends);
     const [budgetItems, setBudgetItems] = useLocalStorage<BudgetItem[]>('budgetItems', sampleBudgetItems);
     const [userProfile, setUserProfile] = useLocalStorage<UserProfile>('userProfile', sampleUserProfile);
-    const [fmpApiKey, setFmpApiKey] = useLocalStorage<string>('fmpApiKey', '');
+    const [avApiKey, setAvApiKey] = useLocalStorage<string>('avApiKey', '');
     const [targetAnnualSpending, setTargetAnnualSpending] = useLocalStorage<number>('targetAnnualSpending', 60000);
     const [fireSettings, setFireSettings] = useLocalStorage<FireSettings>('fireSettings', {
         swr: 4.0,
@@ -152,7 +151,7 @@ const App: React.FC = () => {
                 if (!handle) return;
 
                 // Gather full backup JSON
-                const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'fmpApiKey', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
+                const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'avApiKey', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
                 const exportData: Record<string, any> = {};
                 keysToExport.forEach(key => {
                     const item = window.localStorage.getItem(key);
@@ -219,19 +218,19 @@ const App: React.FC = () => {
 
     // Refresh investment prices
     const refreshPrices = useCallback(async () => {
-        if (!fmpApiKey || holdings.length === 0) return;
+        if (!avApiKey || holdings.length === 0) return;
         setIsPricesLoading(true);
         const tickers = holdings.map(h => h.ticker);
-        const priceData = await fetchInvestmentPrices(tickers, fmpApiKey);
+        const results = await fetchPricesFromAlphaVantage(tickers, avApiKey);
         
-        const priceMap = new Map(priceData.map(p => [p.symbol, p.price]));
+        const priceMap = new Map(results.map(p => [p.symbol, p.price]));
         
         setInvestments(holdings.map(inv => ({
             ...inv,
             currentValue: (priceMap.get(inv.ticker) || 0) * inv.quantity
         })));
         setIsPricesLoading(false);
-    }, [fmpApiKey, holdings]);
+    }, [avApiKey, holdings]);
 
     useEffect(() => {
          const initialInvestments = holdings.map(h => ({ ...h, currentValue: 0 }));
@@ -239,11 +238,10 @@ const App: React.FC = () => {
     }, [holdings]);
 
     useEffect(() => {
-        if(fmpApiKey && holdings.length > 0) {
+        if(avApiKey && holdings.length > 0) {
             refreshPrices();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [fmpApiKey, holdings.length]);
+    }, [avApiKey, holdings.length]);
 
 
     // CRUD functions
@@ -443,7 +441,7 @@ const App: React.FC = () => {
                                     refreshPrices={refreshPrices}
                                     isPricesLoading={isPricesLoading}
                                     formatCurrency={formatCurrency}
-                                    fmpApiKey={fmpApiKey}
+                                    avApiKey={avApiKey}
                                 />
                             } />
                             <Route path="/manage" element={
@@ -473,7 +471,7 @@ const App: React.FC = () => {
                                     addDividend={(item) => addOrUpdate(setDividends, item)}
                                     removeDividend={(id) => remove(setDividends, id)}
                                     formatCurrency={formatCurrency}
-                                    fmpApiKey={fmpApiKey}
+                                    avApiKey={avApiKey}
                                 />
                             } />
                              <Route path="/incomes" element={
@@ -508,12 +506,6 @@ const App: React.FC = () => {
                                     removeBudgetItem={deleteBudgetItemWithScope}
                                 />
                             } />
-                            <Route path="/research" element={
-                                <MarketResearchPage
-                                    fmpApiKey={fmpApiKey}
-                                    formatCurrency={formatCurrency}
-                                />
-                            } />
                             <Route path="/fire" element={
                                 <FIREPage
                                     netWorth={netWorth}
@@ -528,7 +520,7 @@ const App: React.FC = () => {
                                     holdings={investments}
                                     refreshPrices={refreshPrices}
                                     isPricesLoading={isPricesLoading}
-                                    fmpApiKey={fmpApiKey}
+                                    avApiKey={avApiKey}
                                     targetAllocations={targetAllocations}
                                     setTargetAllocations={setTargetAllocations}
                                     formatCurrency={formatCurrency}
@@ -538,8 +530,8 @@ const App: React.FC = () => {
                                 <SettingsPage
                                     userProfile={userProfile}
                                     saveUserProfile={setUserProfile}
-                                    fmpApiKey={fmpApiKey}
-                                    saveFmpApiKey={setFmpApiKey}
+                                    avApiKey={avApiKey}
+                                    saveAvApiKey={setAvApiKey}
                                     targetAnnualSpending={targetAnnualSpending}
                                     saveTargetAnnualSpending={setTargetAnnualSpending}
                                     currency={currency}

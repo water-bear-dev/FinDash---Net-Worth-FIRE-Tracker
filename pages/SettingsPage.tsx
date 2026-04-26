@@ -10,8 +10,8 @@ import moment from 'moment';
 interface SettingsPageProps {
     userProfile: UserProfile;
     saveUserProfile: (profile: UserProfile) => void;
-    fmpApiKey: string;
-    saveFmpApiKey: (key: string) => void;
+    avApiKey: string;
+    saveAvApiKey: (key: string) => void;
     targetAnnualSpending: number;
     saveTargetAnnualSpending: (value: number) => void;
     currency: string;
@@ -21,15 +21,15 @@ interface SettingsPageProps {
 const SettingsPage: React.FC<SettingsPageProps> = ({ 
     userProfile, 
     saveUserProfile, 
-    fmpApiKey, 
-    saveFmpApiKey,
+    avApiKey, 
+    saveAvApiKey,
     targetAnnualSpending,
     saveTargetAnnualSpending,
     currency,
     saveCurrency,
 }) => {
     const [profile, setProfile] = useState<UserProfile>(userProfile);
-    const [apiKey, setApiKey] = useState(fmpApiKey);
+    const [apiKey, setApiKey] = useState(avApiKey);
     const [spending, setSpending] = useState(targetAnnualSpending);
     const [currentCurrency, setCurrentCurrency] = useState(currency);
     const [syncDirName, setSyncDirName] = useState<string | null>(null);
@@ -37,7 +37,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     const [lastSyncTime, setLastSyncTime] = useState<string | null>(window.localStorage.getItem('lastSyncTime'));
 
     useEffect(() => { setProfile(userProfile); }, [userProfile]);
-    useEffect(() => { setApiKey(fmpApiKey); }, [fmpApiKey]);
+    useEffect(() => { setApiKey(avApiKey); }, [avApiKey]);
     useEffect(() => { setSpending(targetAnnualSpending); }, [targetAnnualSpending]);
     useEffect(() => { setCurrentCurrency(currency); }, [currency]);
 
@@ -51,7 +51,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     }, []);
 
     const handleProfileSubmit = (e: React.FormEvent) => { e.preventDefault(); saveUserProfile(profile); alert('Profile saved!'); };
-    const handleApiSubmit = (e: React.FormEvent) => { e.preventDefault(); saveFmpApiKey(apiKey); alert('API Key saved!'); };
+    const handleApiSubmit = (e: React.FormEvent) => { e.preventDefault(); saveAvApiKey(apiKey); alert('API Key saved!'); };
     const handleFireSubmit = (e: React.FormEvent) => { e.preventDefault(); saveTargetAnnualSpending(spending); alert('FIRE goal saved!'); };
     const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newCurrency = e.target.value;
@@ -60,7 +60,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     }
     
     const handleExport = () => {
-        const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'fmpApiKey', 'targetAnnualSpending', 'currency', 'theme'];
+            const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'avApiKey', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
         const exportData: Record<string, any> = {};
         
         keysToExport.forEach(key => {
@@ -235,8 +235,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             <Card title="API Keys">
                  <form onSubmit={handleApiSubmit} className="space-y-4">
                     <div>
-                        <label htmlFor="fmpApiKey" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Financial Modeling Prep API Key</label>
-                        <input type="password" id="fmpApiKey" name="fmpApiKey" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className={inputClasses} />
+                        <label htmlFor="avApiKey" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Alpha Vantage API Key</label>
+                        <input type="password" id="avApiKey" name="avApiKey" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className={inputClasses} />
                         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                             Required to fetch live market prices for your investments. Get a free key from <a href="https://site.financialmodelingprep.com/developer/docs" target="_blank" rel="noopener noreferrer" className="text-indigo-500 hover:underline">FMP</a>.
                         </p>

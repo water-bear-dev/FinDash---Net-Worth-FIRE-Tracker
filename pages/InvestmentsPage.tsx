@@ -9,7 +9,7 @@ interface InvestmentsPageProps {
     holdings: Investment[];
     refreshPrices: () => void;
     isPricesLoading: boolean;
-    fmpApiKey: string;
+    avApiKey: string;
     targetAllocations: TargetAllocation[];
     setTargetAllocations: (value: TargetAllocation[] | ((val: TargetAllocation[]) => TargetAllocation[])) => void;
     formatCurrency: (value: number) => string;
@@ -19,7 +19,7 @@ const InvestmentsPage: React.FC<InvestmentsPageProps> = ({
     holdings,
     refreshPrices,
     isPricesLoading,
-    fmpApiKey,
+    avApiKey,
     targetAllocations,
     setTargetAllocations,
     formatCurrency
@@ -36,13 +36,13 @@ const InvestmentsPage: React.FC<InvestmentsPageProps> = ({
                     <button 
                         onClick={refreshPrices} 
                         className="w-auto text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:outline-none focus:ring-indigo-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" 
-                        disabled={isPricesLoading || !fmpApiKey}
-                        title={!fmpApiKey ? "Please set your API key in Settings to refresh prices" : ""}
+                        disabled={isPricesLoading || !avApiKey}
+                        title={!avApiKey ? "Please set your API key in Settings to refresh prices" : ""}
                     >
                         {isPricesLoading ? 'Refreshing...' : 'Refresh Prices'}
                     </button>
                 </div>
-                {!fmpApiKey && <ApiKeyWarning featureName="live price updates" />}
+                {!avApiKey && <ApiKeyWarning featureName="live price updates" />}
                 <InvestmentTable investments={holdings} />
             </Card>
 

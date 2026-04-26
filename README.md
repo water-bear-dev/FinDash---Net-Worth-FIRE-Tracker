@@ -26,7 +26,6 @@ Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your bro
     *   **Historical Net Worth Tracking**: Automatically records your net worth monthly, visualized via a dynamic Line Chart.
     *   **Asset Allocation Heatmap**: An interactive Treemap that visualizes the proportion of your entire portfolio.
     *   **Financial Calendar**: A visual calendar view of your month. See exactly when bills are due, when income arrives, and when dividends are paid.
-*   **🔎 Market Research**: Look up company profiles, financial news, and stock metrics directly within the app.
 *   **🌗 Theming**: Fully responsive design with native Dark and Light modes.
 *   **☁️ Data Portability & Automated Sync**: 
     *   **Zero-Knowledge Architecture**: All data lives strictly in your browser (`localStorage`). No external databases.
@@ -42,8 +41,7 @@ Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your bro
 *   **Routing**: [React Router v7](https://reactrouter.com/)
 *   **Data Persistence**: LocalStorage (Browser)
 *   **APIs**: 
-    *   [Financial Modeling Prep](https://site.financialmodelingprep.com/) (Market Data)
-    *   [Google Gemini](https://ai.google.dev/) (AI Insights)
+    *   [Alpha Vantage](https://www.alphavantage.co/) (Market Data)
 
 ## 🏁 Getting Started
 
@@ -63,13 +61,7 @@ Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your bro
     npm install
     ```
 
-3.  **Variable Setup (Optional - for AI features):**
-    Create a `.env.local` file in the root directory and add your Google Gemini API key:
-    ```env
-    GEMINI_API_KEY=your_gemini_api_key_here
-    ```
-
-4.  **Run the app:**
+3.  **Run the app:**
     ```bash
     npm run dev
     ```
@@ -92,8 +84,8 @@ To unlock the full power of the dashboard, you need to configure a few settings 
 
 1.  **Market Data (Stock Prices)**:
     *   Go to the **Settings** page within the app.
-    *   Enter your **Financial Modeling Prep (FMP)** API Key.
-    *   *Note: You can get a free API key from [financialmodelingprep.com](https://site.financialmodelingprep.com/developer/docs).*
+    *   Enter your **Alpha Vantage** API Key.
+    *   *Note: You can get a free API key from [alphavantage.co](https://www.alphavantage.co/support/#api-key).*
     
 2.  **Profile & Goals**:
     *   In **Settings**, set your **Target Annual Spending** (this drives the FIRE progress calculations).
@@ -101,7 +93,7 @@ To unlock the full power of the dashboard, you need to configure a few settings 
 
 ## 🛡️ Privacy & Data Portability
 
-This application is designed with privacy first. **All your financial data is stored locally in your browser's LocalStorage.** No personal financial data is ever sent to a remote server or database managed by this project. API calls are made directly from your browser to the data providers (FMP).
+This application is designed with privacy first. **All your financial data is stored locally in your browser's LocalStorage.** No personal financial data is ever sent to a remote server or database managed by this project. API calls are made directly from your browser to the data providers (Alpha Vantage).
 
 ### Data Backup & Migration (Export / Import)
 Since there is no centralized database, your data does not automatically sync across devices. To migrate your data (e.g., from your laptop to your phone) or create a safe backup:
