@@ -1,21 +1,28 @@
 import React from 'react';
-import { Investment } from '../types';
+import { Investment, TargetAllocation } from '../types';
 import Card from '../components/Card';
 import InvestmentTable from '../components/InvestmentTable';
 import ApiKeyWarning from '../components/ApiKeyWarning';
+import RebalancingEngine from '../components/RebalancingEngine';
 
 interface InvestmentsPageProps {
     holdings: Investment[];
     refreshPrices: () => void;
     isPricesLoading: boolean;
     fmpApiKey: string;
+    targetAllocations: TargetAllocation[];
+    setTargetAllocations: (value: TargetAllocation[] | ((val: TargetAllocation[]) => TargetAllocation[])) => void;
+    formatCurrency: (value: number) => string;
 }
 
 const InvestmentsPage: React.FC<InvestmentsPageProps> = ({
     holdings,
     refreshPrices,
     isPricesLoading,
-    fmpApiKey
+    fmpApiKey,
+    targetAllocations,
+    setTargetAllocations,
+    formatCurrency
 }) => {
     return (
         <main className="space-y-6">
@@ -39,14 +46,13 @@ const InvestmentsPage: React.FC<InvestmentsPageProps> = ({
                 <InvestmentTable investments={holdings} />
             </Card>
 
-            <Card title="Rebalancing Engine (Coming Soon)">
-                <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                    <p className="mb-2">Portfolio rebalancing will be implemented in Phase 2.</p>
-                    <ul className="text-sm list-disc list-inside inline-block text-left">
-                        <li>Set Target Allocations (e.g., 80% Stocks, 20% Bonds)</li>
-                        <li>Automated Buy/Sell recommendations to reach equilibrium</li>
-                    </ul>
-                </div>
+            <Card title="Rebalancing Engine">
+                <RebalancingEngine 
+                    holdings={holdings}
+                    targetAllocations={targetAllocations}
+                    setTargetAllocations={setTargetAllocations}
+                    formatCurrency={formatCurrency}
+                />
             </Card>
         </main>
     );

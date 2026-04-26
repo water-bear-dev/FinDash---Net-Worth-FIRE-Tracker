@@ -12,10 +12,10 @@ Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your bro
 
 *   **📊 Net Worth Dashboard**: Visualize your financial health in real-time. Automatically aggregates your **Assets** (Cash, Stocks, Crypto, Property) and **Liabilities** (Loans, Mortgages) to calculate your Net Worth.
 *   **🔥 Dedicated FIRE Dashboard**: Track your "Freedom Number" and journey to early retirement. Calculates exact progress based on Target Annual Spend and features space for advanced withdrawal simulations.
-*   **📈 Advanced Investment Portfolio**: 
-    *   Dedicated holdings page to track buy/sell transactions.
-    *   Automatic calculation of average cost basis and total holdings.
-    *   **Real-time Price Updates** for Stocks and ETFs (requires free API key).
+*   **📈 Advanced Investment Portfolio & Rebalancing Engine**: 
+    *   Dedicated holdings page to track buy/sell transactions and live pricing.
+    *   **Algorithmic Rebalancing**: Define target allocations (e.g. 80% VOO, 20% AAPL), input new capital, and the engine will calculate the exact buy/sell trades required to reach equilibrium.
+    *   Visual Pie Charts comparing Current vs Target Allocation.
 *   **💰 Budgeting Engine**: 
     *   Manage recurring Incomes and Expenses (e.g., salary, rent, subscriptions).
     *   Smart projections: Automatically generates future financial events based on your recurring settings.

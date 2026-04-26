@@ -14,7 +14,7 @@ import FIREPage from './pages/FIREPage';
 import InvestmentsPage from './pages/InvestmentsPage';
 import { 
     CashAccount, Investment, Property, Liability, Transaction, 
-    Dividend, BudgetItem, UserProfile, AssetCategory
+    Dividend, BudgetItem, UserProfile, AssetCategory, TargetAllocation
 } from './types';
 import { fetchInvestmentPrices } from './services/marketDataService';
 import moment from 'moment';
@@ -129,6 +129,7 @@ const App: React.FC = () => {
     const [targetAnnualSpending, setTargetAnnualSpending] = useLocalStorage<number>('targetAnnualSpending', 60000);
     const [currency, setCurrency] = useLocalStorage<string>('currency', 'USD');
     const [theme, setTheme] = useLocalStorage<string>('theme', 'dark');
+    const [targetAllocations, setTargetAllocations] = useLocalStorage<TargetAllocation[]>('targetAllocations', []);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     const [isPricesLoading, setIsPricesLoading] = useState(false);
@@ -449,6 +450,9 @@ const App: React.FC = () => {
                                     refreshPrices={refreshPrices}
                                     isPricesLoading={isPricesLoading}
                                     fmpApiKey={fmpApiKey}
+                                    targetAllocations={targetAllocations}
+                                    setTargetAllocations={setTargetAllocations}
+                                    formatCurrency={formatCurrency}
                                 />
                             } />
                             <Route path="/settings" element={

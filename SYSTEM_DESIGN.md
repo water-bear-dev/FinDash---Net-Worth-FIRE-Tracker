@@ -34,6 +34,7 @@ graph TD
 - **Local Persistence**: `useLocalStorage` hook synchronizes the React state with `window.localStorage`.
 - **Derived State Engine**: Heavy use of `useMemo` to aggregate net worth and portfolio metrics from raw transaction ledgers on-the-fly.
 - **Data Model**: Atomic, ledger-based transaction history instead of snapshot-based holdings.
+- **Algorithmic Rebalancing Engine**: A pure utility function that computes the exact buy/sell monetary differences needed to align a user's current holdings with a target allocation percentage array.
 
 ### 3.3 Integration Layer
 - **Market Data**: Direct browser-to-API calls to Financial Modeling Prep.

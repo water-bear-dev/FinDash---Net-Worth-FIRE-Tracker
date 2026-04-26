@@ -129,3 +129,8 @@ export interface StockNewsItem {
     publishedDate: string;
     text: string;
 }
+
+export interface TargetAllocation {
+    ticker: string;
+    targetPercentage: number; // 0-100
+}

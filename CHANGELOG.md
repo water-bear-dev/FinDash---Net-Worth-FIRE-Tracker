@@ -5,6 +5,9 @@ All notable changes to the **FinDash** project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `RebalancingEngine.tsx`: New component added to the Investments page to handle target allocations and portfolio rebalancing.
+- `calculateRebalance` utility: Added an algorithmic engine to calculate exact buy/sell amounts needed to reach target portfolio allocations, including new capital injections.
+- `TargetAllocation` type added to `types.ts`.
 - `FIREPage.tsx`: Dedicated dashboard for tracking Financial Independence and Early Retirement metrics.
 - `InvestmentsPage.tsx`: Dedicated page for portfolio holdings and asset management.
 - `SYSTEM_DESIGN.md`: Comprehensive architecture and technical specification document.
