@@ -134,3 +134,11 @@ export interface TargetAllocation {
     ticker: string;
     targetPercentage: number; // 0-100
 }
+
+export interface FireSettings {
+    swr: number; // Safe Withdrawal Rate (e.g. 4.0)
+    inflationRate: number; // e.g. 2.5
+    expectedReturn: number; // e.g. 7.0
+    taxRate: number; // e.g. 15.0
+    simulationYears: number; // e.g. 30
+}

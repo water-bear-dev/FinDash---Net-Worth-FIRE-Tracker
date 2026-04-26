@@ -11,7 +11,10 @@ Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your bro
 ## 🚀 Key Features
 
 *   **📊 Net Worth Dashboard**: Visualize your financial health in real-time. Automatically aggregates your **Assets** (Cash, Stocks, Crypto, Property) and **Liabilities** (Loans, Mortgages) to calculate your Net Worth.
-*   **🔥 Dedicated FIRE Dashboard**: Track your "Freedom Number" and journey to early retirement. Calculates exact progress based on Target Annual Spend and features space for advanced withdrawal simulations.
+*   **🔥 Dedicated FIRE Dashboard & Monte Carlo Simulator**: 
+    *   Track your "Freedom Number" and journey to early retirement. 
+    *   **Advanced Engine**: Set custom Safe Withdrawal Rates (SWR), account for inflation, and simulate pre-tax vs post-tax requirements.
+    *   **Monte Carlo Probabilities**: Runs thousands of simulated market paths to calculate the exact probability your portfolio will survive your chosen retirement duration.
 *   **📈 Advanced Investment Portfolio & Rebalancing Engine**: 
     *   Dedicated holdings page to track buy/sell transactions and live pricing.
     *   **Algorithmic Rebalancing**: Define target allocations (e.g. 80% VOO, 20% AAPL), input new capital, and the engine will calculate the exact buy/sell trades required to reach equilibrium.

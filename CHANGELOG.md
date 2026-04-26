@@ -5,6 +5,9 @@ All notable changes to the **FinDash** project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `FIRESimulator.tsx` and `fireSimulation.ts`: Integrated an advanced FIRE engine with Monte Carlo simulations to calculate portfolio survival probability over retirement years.
+- Support for detailed FIRE settings including Safe Withdrawal Rate (SWR), inflation, expected market return, and tax rates.
+- Dynamic adjustments in the FIRE Dashboard showing required pre-tax income and inflation-adjusted targets.
 - `RebalancingEngine.tsx`: New component added to the Investments page to handle target allocations and portfolio rebalancing.
 - `calculateRebalance` utility: Added an algorithmic engine to calculate exact buy/sell amounts needed to reach target portfolio allocations, including new capital injections.
 - `TargetAllocation` type added to `types.ts`.

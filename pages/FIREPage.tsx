@@ -1,15 +1,19 @@
 import React from 'react';
 import Card from '../components/Card';
+import FIRESimulator from '../components/FIRESimulator';
+import { FireSettings } from '../types';
 
 interface FIREPageProps {
     netWorth: number;
     fireData: { targetAnnualSpending: number; monthlySavings: number; };
+    fireSettings: FireSettings;
+    setFireSettings: (value: FireSettings | ((val: FireSettings) => FireSettings)) => void;
     formatCurrency: (value: number) => string;
 }
 
-const FIREPage: React.FC<FIREPageProps> = ({ netWorth, fireData, formatCurrency }) => {
+const FIREPage: React.FC<FIREPageProps> = ({ netWorth, fireData, fireSettings, setFireSettings, formatCurrency }) => {
     // Basic FIRE math
-    const targetFIREAmount = fireData.targetAnnualSpending * 25; // 4% rule assumption
+    const targetFIREAmount = fireData.targetAnnualSpending / (fireSettings.swr / 100);
     const progressPercentage = targetFIREAmount > 0 ? Math.min((netWorth / targetFIREAmount) * 100, 100) : 0;
     
     // Time to FIRE estimation
@@ -28,9 +32,9 @@ const FIREPage: React.FC<FIREPageProps> = ({ netWorth, fireData, formatCurrency 
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <Card title="Target FIRE Number">
+                <Card title="Base Target FIRE Number">
                     <div className="text-4xl font-bold text-indigo-500 tracking-tight">{formatCurrency(targetFIREAmount)}</div>
-                    <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Based on {formatCurrency(fireData.targetAnnualSpending)} annual spend (4% Rule)</div>
+                    <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Based on {formatCurrency(fireData.targetAnnualSpending)} annual spend ({fireSettings.swr}% SWR)</div>
                 </Card>
                 <Card title="Current Progress">
                     <div className="text-4xl font-bold text-green-500 tracking-tight">{progressPercentage.toFixed(1)}%</div>
@@ -50,15 +54,15 @@ const FIREPage: React.FC<FIREPageProps> = ({ netWorth, fireData, formatCurrency 
                 </Card>
             </div>
 
-            <Card title="Advanced Simulator (Coming Soon)">
-                <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                    <p className="mb-2">Advanced FIRE simulations will be implemented in Phase 3.</p>
-                    <ul className="text-sm list-disc list-inside inline-block text-left">
-                        <li>Custom Safe Withdrawal Rates (SWR)</li>
-                        <li>Inflation Adjustments</li>
-                        <li>Monte Carlo Probabilities</li>
-                    </ul>
-                </div>
+            <Card title="Advanced Monte Carlo Simulator">
+                <FIRESimulator 
+                    netWorth={netWorth}
+                    targetAnnualSpending={fireData.targetAnnualSpending}
+                    monthlySavings={fireData.monthlySavings}
+                    fireSettings={fireSettings}
+                    setFireSettings={setFireSettings}
+                    formatCurrency={formatCurrency}
+                />
             </Card>
         </main>
     );

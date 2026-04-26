@@ -35,6 +35,7 @@ graph TD
 - **Derived State Engine**: Heavy use of `useMemo` to aggregate net worth and portfolio metrics from raw transaction ledgers on-the-fly.
 - **Data Model**: Atomic, ledger-based transaction history instead of snapshot-based holdings.
 - **Algorithmic Rebalancing Engine**: A pure utility function that computes the exact buy/sell monetary differences needed to align a user's current holdings with a target allocation percentage array.
+- **Monte Carlo FIRE Engine**: A client-side statistical engine that runs thousands of simulated market paths (using Box-Muller normal distributions) over user-defined retirement durations to output a reliable "Probability of Success" for early retirement given specific Safe Withdrawal Rates, inflation, and tax constraints.
 
 ### 3.3 Integration Layer
 - **Market Data**: Direct browser-to-API calls to Financial Modeling Prep.

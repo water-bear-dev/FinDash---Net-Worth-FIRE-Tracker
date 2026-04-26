@@ -14,7 +14,7 @@ import FIREPage from './pages/FIREPage';
 import InvestmentsPage from './pages/InvestmentsPage';
 import { 
     CashAccount, Investment, Property, Liability, Transaction, 
-    Dividend, BudgetItem, UserProfile, AssetCategory, TargetAllocation
+    Dividend, BudgetItem, UserProfile, AssetCategory, TargetAllocation, FireSettings
 } from './types';
 import { fetchInvestmentPrices } from './services/marketDataService';
 import moment from 'moment';
@@ -127,6 +127,13 @@ const App: React.FC = () => {
     const [userProfile, setUserProfile] = useLocalStorage<UserProfile>('userProfile', sampleUserProfile);
     const [fmpApiKey, setFmpApiKey] = useLocalStorage<string>('fmpApiKey', '');
     const [targetAnnualSpending, setTargetAnnualSpending] = useLocalStorage<number>('targetAnnualSpending', 60000);
+    const [fireSettings, setFireSettings] = useLocalStorage<FireSettings>('fireSettings', {
+        swr: 4.0,
+        inflationRate: 2.5,
+        expectedReturn: 7.0,
+        taxRate: 15.0,
+        simulationYears: 30
+    });
     const [currency, setCurrency] = useLocalStorage<string>('currency', 'USD');
     const [theme, setTheme] = useLocalStorage<string>('theme', 'dark');
     const [targetAllocations, setTargetAllocations] = useLocalStorage<TargetAllocation[]>('targetAllocations', []);
@@ -441,6 +448,8 @@ const App: React.FC = () => {
                                 <FIREPage
                                     netWorth={netWorth}
                                     fireData={{ targetAnnualSpending, monthlySavings: budgetSummary.netMonthlySavings }}
+                                    fireSettings={fireSettings}
+                                    setFireSettings={setFireSettings}
                                     formatCurrency={formatCurrency}
                                 />
                             } />
