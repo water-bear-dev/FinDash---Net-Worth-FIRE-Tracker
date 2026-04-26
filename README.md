@@ -75,6 +75,17 @@ Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your bro
     ```
     Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+### 🧪 Testing
+
+This project includes End-to-End (E2E) tests using **Playwright**.
+
+To run the tests, refer to [TECHNICAL_TESTING.md](./TECHNICAL_TESTING.md).
+
+Quick command to run E2E tests:
+```bash
+python3 scripts/with_server.py --server "npm run dev" --port 3000 -- python3 tests/e2e/test_dashboard.py
+```
+
 ## ⚙️ Configuration
 
 To unlock the full power of the dashboard, you need to configure a few settings inside the app:
