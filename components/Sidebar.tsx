@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { HomeIcon, TableCellsIcon, DocumentChartBarIcon, BanknotesIcon, CalendarIcon, Cog6ToothIcon, ArrowTrendingUpIcon, CreditCardIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { HomeIcon, TableCellsIcon, DocumentChartBarIcon, BanknotesIcon, CalendarIcon, Cog6ToothIcon, ArrowTrendingUpIcon, CreditCardIcon, MagnifyingGlassIcon, ChartPieIcon, FireIcon } from '@heroicons/react/24/outline';
 
 interface SidebarProps {
     isCollapsed: boolean;
@@ -33,9 +33,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
                     <TableCellsIcon className={iconClasses} />
                     <span className={textClasses}>Manage Data</span>
                 </NavLink>
-                <NavLink to="/transactions" className={navLinkClasses} title={isCollapsed ? 'Investment & Trading' : undefined}>
+                <NavLink to="/transactions" className={navLinkClasses} title={isCollapsed ? 'Ledger' : undefined}>
                     <DocumentChartBarIcon className={iconClasses} />
-                    <span className={textClasses}>Investment & Trading</span>
+                    <span className={textClasses}>Ledger</span>
+                </NavLink>
+                <NavLink to="/investments" className={navLinkClasses} title={isCollapsed ? 'Investments' : undefined}>
+                    <ChartPieIcon className={iconClasses} />
+                    <span className={textClasses}>Investments</span>
+                </NavLink>
+                <NavLink to="/fire" className={navLinkClasses} title={isCollapsed ? 'FIRE Journey' : undefined}>
+                    <FireIcon className={iconClasses} />
+                    <span className={textClasses}>FIRE Journey</span>
                 </NavLink>
                 <NavLink to="/research" className={navLinkClasses} title={isCollapsed ? 'Market Research' : undefined}>
                     <MagnifyingGlassIcon className={iconClasses} />

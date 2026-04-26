@@ -10,6 +10,8 @@ import CalendarPage from './pages/CalendarPage';
 import SettingsPage from './pages/SettingsPage';
 import IncomesPage from './pages/IncomesPage';
 import MarketResearchPage from './pages/MarketResearchPage';
+import FIREPage from './pages/FIREPage';
+import InvestmentsPage from './pages/InvestmentsPage';
 import { 
     CashAccount, Investment, Property, Liability, Transaction, 
     Dividend, BudgetItem, UserProfile, AssetCategory
@@ -432,6 +434,21 @@ const App: React.FC = () => {
                                 <MarketResearchPage
                                     fmpApiKey={fmpApiKey}
                                     formatCurrency={formatCurrency}
+                                />
+                            } />
+                            <Route path="/fire" element={
+                                <FIREPage
+                                    netWorth={netWorth}
+                                    fireData={{ targetAnnualSpending, monthlySavings: budgetSummary.netMonthlySavings }}
+                                    formatCurrency={formatCurrency}
+                                />
+                            } />
+                            <Route path="/investments" element={
+                                <InvestmentsPage
+                                    holdings={investments}
+                                    refreshPrices={refreshPrices}
+                                    isPricesLoading={isPricesLoading}
+                                    fmpApiKey={fmpApiKey}
                                 />
                             } />
                             <Route path="/settings" element={

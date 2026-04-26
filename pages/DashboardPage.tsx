@@ -1,9 +1,7 @@
 import React from 'react';
 import { CashAccount, Investment, Property, AssetCategory } from '../types';
 import Card from '../components/Card';
-import InvestmentTable from '../components/InvestmentTable';
 import AllocationDonutChart from '../components/AllocationDonutChart';
-import ApiKeyWarning from '../components/ApiKeyWarning';
 
 interface DashboardPageProps {
     netWorth: number;
@@ -80,37 +78,32 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                     </Card>
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <div className="lg:col-span-3">
-                    <Card title="Investments">
-                        <div className="flex justify-end mb-4">
-                            <button 
-                                onClick={refreshPrices} 
-                                className="w-auto text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:outline-none focus:ring-indigo-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" 
-                                disabled={isPricesLoading || !fmpApiKey}
-                                title={!fmpApiKey ? "Please set your API key in Settings to refresh prices" : ""}
-                            >
-                                {isPricesLoading ? 'Refreshing...' : 'Refresh Prices'}
-                            </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card title="Budget Summary">
+                    <div className="space-y-3">
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Monthly Savings Rate</p>
+                            <p className="text-2xl font-semibold text-indigo-500 dark:text-indigo-400">{savingsRate.toFixed(1)}%</p>
                         </div>
-                        {!fmpApiKey && <ApiKeyWarning featureName="live price updates" />}
-                        <InvestmentTable investments={holdings} />
-                    </Card>
-                </div>
-                <div className="lg:col-span-2 space-y-6">
-                     <Card title="Budget Summary">
-                        <div className="space-y-3">
-                            <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Monthly Savings Rate</p>
-                                <p className="text-2xl font-semibold text-indigo-500 dark:text-indigo-400">{savingsRate.toFixed(1)}%</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Net Monthly Savings</p>
-                                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{formatCurrency(budgetSummary.netMonthlySavings)}</p>
-                            </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Net Monthly Savings</p>
+                            <p className="text-2xl font-semibold text-gray-900 dark:text-white">{formatCurrency(budgetSummary.netMonthlySavings)}</p>
                         </div>
-                    </Card>
-                </div>
+                    </div>
+                </Card>
+                <Card title="FIRE Journey">
+                    <div className="space-y-3">
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Target Annual Spend</p>
+                            <p className="text-2xl font-semibold text-gray-900 dark:text-white">{formatCurrency(fireData.targetAnnualSpending)}</p>
+                        </div>
+                        <div className="mt-4">
+                            <a href="#/fire" className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm font-medium">
+                                View Full FIRE Dashboard &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </Card>
             </div>
 
              <Card title="Asset Allocation">
