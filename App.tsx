@@ -3,6 +3,7 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import ChatbotWidget from './components/ChatbotWidget';
+import SetupWizard from './components/SetupWizard';
 import DashboardPage from './pages/DashboardPage';
 import ManageDataPage from './pages/ManageDataPage';
 import TransactionsPage from './pages/TransactionsPage';
@@ -14,7 +15,7 @@ import FIREPage from './pages/FIREPage';
 import InvestmentsPage from './pages/InvestmentsPage';
 import { 
     CashAccount, Investment, Property, Liability, Transaction, 
-    Dividend, BudgetItem, UserProfile, AssetCategory, TargetAllocation, FireSettings
+    Dividend, BudgetItem, UserProfile, AssetCategory, TargetAllocation, FireSettings, RebalancingSettings
 } from './types';
 import { fetchInvestmentPrices } from './services/marketDataService';
 import moment from 'moment';
@@ -118,13 +119,13 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val
 
 const App: React.FC = () => {
     // State management using custom hook
-    const [cashAccounts, setCashAccounts] = useLocalStorage<CashAccount[]>('cashAccounts', sampleCashAccounts);
-    const [properties, setProperties] = useLocalStorage<Property[]>('properties', sampleProperties);
-    const [liabilities, setLiabilities] = useLocalStorage<Liability[]>('liabilities', sampleLiabilities);
-    const [transactions, setTransactions] = useLocalStorage<Transaction[]>('transactions', sampleTransactions);
-    const [dividends, setDividends] = useLocalStorage<Dividend[]>('dividends', sampleDividends);
-    const [budgetItems, setBudgetItems] = useLocalStorage<BudgetItem[]>('budgetItems', sampleBudgetItems);
-    const [userProfile, setUserProfile] = useLocalStorage<UserProfile>('userProfile', sampleUserProfile);
+    const [cashAccounts, setCashAccounts] = useLocalStorage<CashAccount[]>('cashAccounts', []);
+    const [properties, setProperties] = useLocalStorage<Property[]>('properties', []);
+    const [liabilities, setLiabilities] = useLocalStorage<Liability[]>('liabilities', []);
+    const [transactions, setTransactions] = useLocalStorage<Transaction[]>('transactions', []);
+    const [dividends, setDividends] = useLocalStorage<Dividend[]>('dividends', []);
+    const [budgetItems, setBudgetItems] = useLocalStorage<BudgetItem[]>('budgetItems', []);
+    const [userProfile, setUserProfile] = useLocalStorage<UserProfile>('userProfile', { name: '', email: '' });
     const [avApiKey, setAvApiKey] = useLocalStorage<string>('avApiKey', '');
     const [isAvEnabled, setIsAvEnabled] = useLocalStorage<boolean>('isAvEnabled', false);
     const [geminiApiKey, setGeminiApiKey] = useLocalStorage<string>('geminiApiKey', '');
@@ -140,10 +141,32 @@ const App: React.FC = () => {
     const [currency, setCurrency] = useLocalStorage<string>('currency', 'USD');
     const [theme, setTheme] = useLocalStorage<string>('theme', 'dark');
     const [targetAllocations, setTargetAllocations] = useLocalStorage<TargetAllocation[]>('targetAllocations', []);
+    const [rebalancingSettings, setRebalancingSettings] = useLocalStorage<RebalancingSettings>('rebalancingSettings', {
+        brokerageFee: 9.50, // Default for many platforms
+        expectedReturn: 7.0
+    });
     const [historicalNetWorth, setHistoricalNetWorth] = useLocalStorage<HistoricalNetWorth[]>('historicalNetWorth', []);
+    const [isSetupComplete, setIsSetupComplete] = useLocalStorage<boolean>('isSetupComplete', false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     const [isPricesLoading, setIsPricesLoading] = useState(false);
+
+    const completeSetup = (data: { 
+        userProfile: UserProfile; 
+        cashAccounts: CashAccount[]; 
+        properties: Property[]; 
+        liabilities: Liability[]; 
+        targetAnnualSpending: number;
+        currency: string;
+    }) => {
+        setUserProfile(data.userProfile);
+        setCashAccounts(data.cashAccounts);
+        setProperties(data.properties);
+        setLiabilities(data.liabilities);
+        setTargetAnnualSpending(data.targetAnnualSpending);
+        setCurrency(data.currency);
+        setIsSetupComplete(true);
+    };
 
     // Background Auto Sync
     useEffect(() => {
@@ -422,6 +445,17 @@ const App: React.FC = () => {
         document.documentElement.className = theme;
     }, [theme]);
 
+    if (!isSetupComplete) {
+        return (
+            <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${theme}`}>
+                <SetupWizard 
+                    onComplete={completeSetup} 
+                    onSkip={() => setIsSetupComplete(true)} 
+                />
+            </div>
+        );
+    }
+
     return (
         <Router>
             <div className={`flex h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-indigo-950 ${theme}`}>
@@ -516,17 +550,21 @@ const App: React.FC = () => {
                                     fireData={{ targetAnnualSpending, monthlySavings: budgetSummary.netMonthlySavings }}
                                     fireSettings={fireSettings}
                                     setFireSettings={setFireSettings}
+                                    setTargetAnnualSpending={setTargetAnnualSpending}
                                     formatCurrency={formatCurrency}
                                 />
                             } />
                             <Route path="/investments" element={
-                                <InvestmentsPage
-                                    holdings={investments}
-                                    refreshPrices={refreshPrices}
+                                <InvestmentsPage 
+                                    holdings={investments} 
+                                    refreshPrices={refreshPrices} 
                                     isPricesLoading={isPricesLoading}
                                     avApiKey={avApiKey}
                                     targetAllocations={targetAllocations}
                                     setTargetAllocations={setTargetAllocations}
+                                    rebalancingSettings={rebalancingSettings}
+                                    setRebalancingSettings={setRebalancingSettings}
+                                    monthlySavings={budgetSummary.netMonthlySavings}
                                     formatCurrency={formatCurrency}
                                 />
                             } />

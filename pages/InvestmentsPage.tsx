@@ -1,5 +1,5 @@
 import React from 'react';
-import { Investment, TargetAllocation } from '../types';
+import { Investment, TargetAllocation, RebalancingSettings } from '../types';
 import Card from '../components/Card';
 import InvestmentTable from '../components/InvestmentTable';
 import ApiKeyWarning from '../components/ApiKeyWarning';
@@ -12,6 +12,9 @@ interface InvestmentsPageProps {
     avApiKey: string;
     targetAllocations: TargetAllocation[];
     setTargetAllocations: (value: TargetAllocation[] | ((val: TargetAllocation[]) => TargetAllocation[])) => void;
+    rebalancingSettings: RebalancingSettings;
+    setRebalancingSettings: (settings: RebalancingSettings) => void;
+    monthlySavings: number;
     formatCurrency: (value: number) => string;
 }
 
@@ -22,6 +25,9 @@ const InvestmentsPage: React.FC<InvestmentsPageProps> = ({
     avApiKey,
     targetAllocations,
     setTargetAllocations,
+    rebalancingSettings,
+    setRebalancingSettings,
+    monthlySavings,
     formatCurrency
 }) => {
     return (
@@ -51,6 +57,9 @@ const InvestmentsPage: React.FC<InvestmentsPageProps> = ({
                     holdings={holdings}
                     targetAllocations={targetAllocations}
                     setTargetAllocations={setTargetAllocations}
+                    rebalancingSettings={rebalancingSettings}
+                    setRebalancingSettings={setRebalancingSettings}
+                    monthlySavings={monthlySavings}
                     formatCurrency={formatCurrency}
                 />
             </Card>

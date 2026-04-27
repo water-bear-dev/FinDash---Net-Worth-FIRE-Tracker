@@ -86,41 +86,81 @@ const ManageData: React.FC<ManageDataProps> = (props) => {
     };
 
     const renderAddForm = () => {
+        const inputClasses = "w-full p-2.5 bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-all";
+        const labelClass = "block mb-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider";
+        const asterisk = <span className="text-red-500 ml-0.5">*</span>;
+
         switch (activeTab) {
             case 'Cash Accounts':
                 return (
-                    <form onSubmit={(e) => { e.preventDefault(); props.addCashAccount({ name: cashName, balance: parseFloat(cashBalance) }); setCashName(''); setCashBalance(''); }} className="grid grid-cols-1 md:grid-cols-3 gap-2 p-4 bg-gray-700/50 rounded-lg">
-                        <input type="text" placeholder="Account Name" value={cashName} onChange={e => setCashName(e.target.value)} required className="input-field" />
-                        <input type="number" placeholder="Balance" value={cashBalance} onChange={e => setCashBalance(e.target.value)} required className="input-field" />
-                        <button type="submit" className="btn-primary">Add Account</button>
+                    <form onSubmit={(e) => { e.preventDefault(); props.addCashAccount({ name: cashName, balance: parseFloat(cashBalance) }); setCashName(''); setCashBalance(''); }} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 bg-gray-800/40 border border-gray-700 rounded-xl mb-6 shadow-sm">
+                        <div>
+                            <label className={labelClass}>Account Name {asterisk}</label>
+                            <input type="text" placeholder="e.g. My Savings" value={cashName} onChange={e => setCashName(e.target.value)} required className={inputClasses} />
+                        </div>
+                        <div>
+                            <label className={labelClass}>Initial Balance {asterisk}</label>
+                            <input type="number" placeholder="0.00" value={cashBalance} onChange={e => setCashBalance(e.target.value)} required className={inputClasses} />
+                        </div>
+                        <div className="flex items-end">
+                            <button type="submit" className="w-full text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5 transition-all shadow-lg shadow-indigo-500/10 active:scale-95">Add Account</button>
+                        </div>
                     </form>
                 );
             case 'Investments':
                 return (
-                     // FIX: Add missing 'currentValue' and 'category' properties.
-                     <form onSubmit={(e) => { e.preventDefault(); props.addInvestment({ ticker: invTicker.toUpperCase(), quantity: parseFloat(invQty), costBasisPerUnit: parseFloat(invCost), category: AssetCategory.Stock, currentValue: parseFloat(invQty) * parseFloat(invCost) }); setInvTicker(''); setInvQty(''); setInvCost(''); }} className="grid grid-cols-1 md:grid-cols-4 gap-2 p-4 bg-gray-700/50 rounded-lg">
-                        <input type="text" placeholder="Ticker" value={invTicker} onChange={e => setInvTicker(e.target.value)} required className="input-field" />
-                        <input type="number" placeholder="Quantity" value={invQty} onChange={e => setInvQty(e.target.value)} required className="input-field" />
-                        <input type="number" placeholder="Cost Basis / Unit" value={invCost} onChange={e => setInvCost(e.target.value)} required className="input-field" />
-                        <button type="submit" className="btn-primary">Add Investment</button>
+                    <form onSubmit={(e) => { e.preventDefault(); props.addInvestment({ ticker: invTicker.toUpperCase(), quantity: parseFloat(invQty), costBasisPerUnit: parseFloat(invCost), category: AssetCategory.Stock, currentValue: parseFloat(invQty) * parseFloat(invCost) }); setInvTicker(''); setInvQty(''); setInvCost(''); }} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-5 bg-gray-800/40 border border-gray-700 rounded-xl mb-6 shadow-sm">
+                        <div>
+                            <label className={labelClass}>Ticker {asterisk}</label>
+                            <input type="text" placeholder="e.g. VOO" value={invTicker} onChange={e => setInvTicker(e.target.value)} required className={inputClasses} />
+                        </div>
+                        <div>
+                            <label className={labelClass}>Quantity {asterisk}</label>
+                            <input type="number" placeholder="0.00" value={invQty} onChange={e => setInvQty(e.target.value)} required className={inputClasses} />
+                        </div>
+                        <div>
+                            <label className={labelClass}>Cost / Unit {asterisk}</label>
+                            <input type="number" placeholder="0.00" value={invCost} onChange={e => setInvCost(e.target.value)} required className={inputClasses} />
+                        </div>
+                        <div className="flex items-end">
+                            <button type="submit" className="w-full text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5 transition-all shadow-lg shadow-indigo-500/10 active:scale-95">Add Investment</button>
+                        </div>
                     </form>
                 );
              case 'Properties':
                 return (
-                    // FIX: Add missing 'category' property.
-                    <form onSubmit={(e) => { e.preventDefault(); props.addProperty({ name: propName, currentValue: parseFloat(propValue), category: AssetCategory.Property }); setPropName(''); setPropValue(''); }} className="grid grid-cols-1 md:grid-cols-3 gap-2 p-4 bg-gray-700/50 rounded-lg">
-                        <input type="text" placeholder="Property Name" value={propName} onChange={e => setPropName(e.target.value)} required className="input-field" />
-                        <input type="number" placeholder="Current Value" value={propValue} onChange={e => setPropValue(e.target.value)} required className="input-field" />
-                        <button type="submit" className="btn-primary">Add Property</button>
+                    <form onSubmit={(e) => { e.preventDefault(); props.addProperty({ name: propName, currentValue: parseFloat(propValue), category: AssetCategory.Property }); setPropName(''); setPropValue(''); }} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 bg-gray-800/40 border border-gray-700 rounded-xl mb-6 shadow-sm">
+                        <div>
+                            <label className={labelClass}>Property Name {asterisk}</label>
+                            <input type="text" placeholder="e.g. My House" value={propName} onChange={e => setPropName(e.target.value)} required className={inputClasses} />
+                        </div>
+                        <div>
+                            <label className={labelClass}>Current Value {asterisk}</label>
+                            <input type="number" placeholder="0.00" value={propValue} onChange={e => setPropValue(e.target.value)} required className={inputClasses} />
+                        </div>
+                        <div className="flex items-end">
+                            <button type="submit" className="w-full text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5 transition-all shadow-lg shadow-indigo-500/10 active:scale-95">Add Property</button>
+                        </div>
                     </form>
                 );
             case 'Liabilities':
                 return (
-                     <form onSubmit={(e) => { e.preventDefault(); props.addLiability({ name: liaName, outstandingBalance: parseFloat(liaBalance), interestRate: parseFloat(liaRate) }); setLiaName(''); setLiaBalance(''); setLiaRate(''); }} className="grid grid-cols-1 md:grid-cols-4 gap-2 p-4 bg-gray-700/50 rounded-lg">
-                        <input type="text" placeholder="Loan Name" value={liaName} onChange={e => setLiaName(e.target.value)} required className="input-field" />
-                        <input type="number" placeholder="Outstanding Balance" value={liaBalance} onChange={e => setLiaBalance(e.target.value)} required className="input-field" />
-                        <input type="number" placeholder="Interest Rate (%)" value={liaRate} onChange={e => setLiaRate(e.target.value)} required className="input-field" />
-                        <button type="submit" className="btn-primary">Add Liability</button>
+                     <form onSubmit={(e) => { e.preventDefault(); props.addLiability({ name: liaName, outstandingBalance: parseFloat(liaBalance), interestRate: parseFloat(liaRate) }); setLiaName(''); setLiaBalance(''); setLiaRate(''); }} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-5 bg-gray-800/40 border border-gray-700 rounded-xl mb-6 shadow-sm">
+                        <div>
+                            <label className={labelClass}>Loan Name {asterisk}</label>
+                            <input type="text" placeholder="e.g. Mortgage" value={liaName} onChange={e => setLiaName(e.target.value)} required className={inputClasses} />
+                        </div>
+                        <div>
+                            <label className={labelClass}>Balance {asterisk}</label>
+                            <input type="number" placeholder="0.00" value={liaBalance} onChange={e => setLiaBalance(e.target.value)} required className={inputClasses} />
+                        </div>
+                        <div>
+                            <label className={labelClass}>Interest Rate (%) {asterisk}</label>
+                            <input type="number" placeholder="e.g. 5.5" value={liaRate} onChange={e => setLiaRate(e.target.value)} required className={inputClasses} />
+                        </div>
+                        <div className="flex items-end">
+                            <button type="submit" className="w-full text-white bg-red-600 hover:bg-red-700 font-medium rounded-lg text-sm px-5 py-2.5 transition-all shadow-lg shadow-red-500/10 active:scale-95">Add Liability</button>
+                        </div>
                     </form>
                 );
             default: return null;
@@ -129,10 +169,10 @@ const ManageData: React.FC<ManageDataProps> = (props) => {
     
     const renderTable = () => {
         const commonActions = (item: Item, type: ItemType, removeFn: (id: string) => void) => (
-            <td className="px-4 py-2 text-right">
-                <div className="flex justify-end items-center space-x-2">
-                    <button onClick={() => handleEditClick(item, type)} className="text-xs bg-blue-600 hover:bg-blue-700 text-white py-1 px-2 rounded">Edit</button>
-                    <button onClick={() => removeFn(item.id)} className="text-xs bg-red-600 hover:bg-red-700 text-white py-1 px-2 rounded">Delete</button>
+            <td className="px-4 py-3 text-right w-1/4">
+                <div className="flex justify-end items-center space-x-3">
+                    <button onClick={() => handleEditClick(item, type)} className="text-xs font-semibold bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600 hover:text-white py-1.5 px-3 rounded-lg transition-all">Edit</button>
+                    <button onClick={() => removeFn(item.id)} className="text-xs font-semibold bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white py-1.5 px-3 rounded-lg transition-all">Delete</button>
                 </div>
             </td>
         );
@@ -140,16 +180,34 @@ const ManageData: React.FC<ManageDataProps> = (props) => {
         const renderBody = () => {
             switch (activeTab) {
                 case 'Cash Accounts': return props.cashAccounts.map(item => (
-                    <tr key={item.id}><td>{item.name}</td><td className="text-right">{formatCurrency(item.balance)}</td>{commonActions(item, 'cash', props.removeCashAccount)}</tr>
+                    <tr key={item.id} className="hover:bg-gray-700/30 transition-colors border-b border-gray-700/50">
+                        <td className="px-4 py-4 w-1/2 font-medium text-gray-200">{item.name}</td>
+                        <td className="px-4 py-4 w-1/4 text-right font-mono text-green-400">{formatCurrency(item.balance)}</td>
+                        {commonActions(item, 'cash', props.removeCashAccount)}
+                    </tr>
                 ));
                 case 'Investments': return props.investments.map(item => (
-                    <tr key={item.id}><td>{item.ticker}</td><td className="text-right">{item.quantity}</td><td className="text-right">{formatCurrency(item.costBasisPerUnit)}</td>{commonActions(item, 'investment', props.removeInvestment)}</tr>
+                    <tr key={item.id} className="hover:bg-gray-700/30 transition-colors border-b border-gray-700/50">
+                        <td className="px-4 py-4 w-1/4 font-bold text-indigo-400">{item.ticker}</td>
+                        <td className="px-4 py-4 w-1/4 text-right text-gray-300">{item.quantity}</td>
+                        <td className="px-4 py-4 w-1/4 text-right font-mono text-gray-300">{formatCurrency(item.costBasisPerUnit)}</td>
+                        {commonActions(item, 'investment', props.removeInvestment)}
+                    </tr>
                 ));
                 case 'Properties': return props.properties.map(item => (
-                    <tr key={item.id}><td>{item.name}</td><td className="text-right">{formatCurrency(item.currentValue)}</td>{commonActions(item, 'property', props.removeProperty)}</tr>
+                    <tr key={item.id} className="hover:bg-gray-700/30 transition-colors border-b border-gray-700/50">
+                        <td className="px-4 py-4 w-1/2 font-medium text-gray-200">{item.name}</td>
+                        <td className="px-4 py-4 w-1/4 text-right font-mono text-indigo-400">{formatCurrency(item.currentValue)}</td>
+                        {commonActions(item, 'property', props.removeProperty)}
+                    </tr>
                 ));
                 case 'Liabilities': return props.liabilities.map(item => (
-                    <tr key={item.id}><td>{item.name}</td><td className="text-right">{formatCurrency(item.outstandingBalance)}</td><td className="text-right">{item.interestRate.toFixed(2)}%</td>{commonActions(item, 'liability', props.removeLiability)}</tr>
+                    <tr key={item.id} className="hover:bg-gray-700/30 transition-colors border-b border-gray-700/50">
+                        <td className="px-4 py-4 w-1/2 font-medium text-gray-200">{item.name}</td>
+                        <td className="px-4 py-4 w-1/4 text-right font-mono text-red-400">{formatCurrency(item.outstandingBalance)}</td>
+                        <td className="px-4 py-4 w-1/8 text-right text-gray-400">{item.interestRate.toFixed(2)}%</td>
+                        {commonActions(item, 'liability', props.removeLiability)}
+                    </tr>
                 ));
                 default: return null;
             }
@@ -157,22 +215,22 @@ const ManageData: React.FC<ManageDataProps> = (props) => {
 
         const renderHead = () => {
              switch (activeTab) {
-                case 'Cash Accounts': return <tr><th>Name</th><th className="text-right">Balance</th><th className="text-right">Actions</th></tr>;
-                case 'Investments': return <tr><th>Ticker</th><th className="text-right">Quantity</th><th className="text-right">Cost/Unit</th><th className="text-right">Actions</th></tr>;
-                case 'Properties': return <tr><th>Name</th><th className="text-right">Current Value</th><th className="text-right">Actions</th></tr>;
-                case 'Liabilities': return <tr><th>Name</th><th className="text-right">Balance</th><th className="text-right">Rate</th><th className="text-right">Actions</th></tr>;
+                case 'Cash Accounts': return <tr><th className="px-4 py-3 w-1/2">Name</th><th className="px-4 py-3 w-1/4 text-right">Balance</th><th className="px-4 py-3 w-1/4 text-right">Actions</th></tr>;
+                case 'Investments': return <tr><th className="px-4 py-3 w-1/4">Ticker</th><th className="px-4 py-3 w-1/4 text-right">Quantity</th><th className="px-4 py-3 w-1/4 text-right">Cost/Unit</th><th className="px-4 py-3 w-1/4 text-right">Actions</th></tr>;
+                case 'Properties': return <tr><th className="px-4 py-3 w-1/2">Name</th><th className="px-4 py-3 w-1/4 text-right">Current Value</th><th className="px-4 py-3 w-1/4 text-right">Actions</th></tr>;
+                case 'Liabilities': return <tr><th className="px-4 py-3 w-1/2">Name</th><th className="px-4 py-3 w-1/4 text-right">Balance</th><th className="px-4 py-3 w-1/8 text-right">Rate</th><th className="px-4 py-3 w-1/4 text-right">Actions</th></tr>;
                 default: return null;
             }
         };
 
         return (
-            <div className="overflow-x-auto">
-                <table className="w-full text-left table-auto">
-                    <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
+            <div className="overflow-hidden rounded-xl border border-gray-700">
+                <table className="w-full text-left table-fixed border-collapse">
+                    <thead className="text-[10px] font-bold text-gray-400 uppercase bg-gray-800/50 border-b border-gray-700">
                         {renderHead()}
                     </thead>
-                    <tbody className="divide-y divide-gray-700">
-                        {renderBody()?.map((row, index) => React.cloneElement(row, { className: 'hover:bg-gray-700/50' }))}
+                    <tbody className="bg-gray-800/20">
+                        {renderBody()}
                     </tbody>
                 </table>
             </div>

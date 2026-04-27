@@ -80,6 +80,7 @@ export interface BudgetItem {
     isRecurring: boolean;
     recurringSettings?: RecurringSettings;
     originalId?: string;
+    description?: string;
 }
 
 export interface UserProfile {
@@ -114,4 +115,9 @@ export interface FireSettings {
 export interface HistoricalNetWorth {
     date: string; // YYYY-MM
     netWorth: number;
+}
+
+export interface RebalancingSettings {
+    brokerageFee: number;
+    expectedReturn: number;
 }
