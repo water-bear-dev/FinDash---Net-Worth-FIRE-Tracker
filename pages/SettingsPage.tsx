@@ -12,17 +12,32 @@ interface SettingsPageProps {
     saveUserProfile: (profile: UserProfile) => void;
     avApiKey: string;
     saveAvApiKey: (key: string) => void;
+    isAvEnabled: boolean;
+    saveIsAvEnabled: (enabled: boolean) => void;
+    geminiApiKey: string;
+    saveGeminiApiKey: (key: string) => void;
+    isChatbotEnabled: boolean;
+    saveIsChatbotEnabled: (enabled: boolean) => void;
     targetAnnualSpending: number;
     saveTargetAnnualSpending: (value: number) => void;
     currency: string;
     saveCurrency: (currency: string) => void;
 }
 
+const Switch: React.FC<{ enabled: boolean; onChange: (enabled: boolean) => void }> = ({ enabled, onChange }) => (
+    <label className="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" className="sr-only peer" checked={enabled} onChange={(e) => onChange(e.target.checked)} />
+        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+    </label>
+);
+
 const SettingsPage: React.FC<SettingsPageProps> = ({ 
     userProfile, 
     saveUserProfile, 
     avApiKey, 
     saveAvApiKey,
+    isAvEnabled,
+    saveIsAvEnabled,
     geminiApiKey,
     saveGeminiApiKey,
     isChatbotEnabled,
@@ -34,6 +49,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 }) => {
     const [profile, setProfile] = useState<UserProfile>(userProfile);
     const [apiKey, setApiKey] = useState(avApiKey);
+    const [avEnabled, setAvEnabled] = useState(isAvEnabled);
     const [spending, setSpending] = useState(targetAnnualSpending);
     const [geminiKey, setGeminiKey] = useState(geminiApiKey);
     const [chatbotEnabled, setChatbotEnabled] = useState(isChatbotEnabled);
@@ -44,6 +60,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
     useEffect(() => { setProfile(userProfile); }, [userProfile]);
     useEffect(() => { setApiKey(avApiKey); }, [avApiKey]);
+    useEffect(() => { setAvEnabled(isAvEnabled); }, [isAvEnabled]);
     useEffect(() => { setSpending(targetAnnualSpending); }, [targetAnnualSpending]);
     useEffect(() => { setGeminiKey(geminiApiKey); }, [geminiApiKey]);
     useEffect(() => { setChatbotEnabled(isChatbotEnabled); }, [isChatbotEnabled]);
@@ -62,6 +79,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     const handleApiSubmit = (e: React.FormEvent) => { 
         e.preventDefault(); 
         saveAvApiKey(apiKey); 
+        saveIsAvEnabled(avEnabled);
         saveGeminiApiKey(geminiKey);
         saveIsChatbotEnabled(chatbotEnabled);
         alert('API Keys and settings saved!'); 
@@ -74,7 +92,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     }
     
     const handleExport = () => {
-            const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'avApiKey', 'geminiApiKey', 'isChatbotEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
+            const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'avApiKey', 'isAvEnabled', 'geminiApiKey', 'isChatbotEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
         const exportData: Record<string, any> = {};
         
         keysToExport.forEach(key => {
@@ -171,7 +189,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             }
 
             // Gather full backup JSON
-            const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'fmpApiKey', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
+            const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'avApiKey', 'isAvEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
             const exportData: Record<string, any> = {};
             keysToExport.forEach(key => {
                 const item = window.localStorage.getItem(key);
@@ -248,26 +266,39 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
             <Card title="API Keys & Integrations">
                  <form onSubmit={handleApiSubmit} className="space-y-4">
-                    <div>
-                        <label htmlFor="avApiKey" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Alpha Vantage API Key</label>
-                        <input type="password" id="avApiKey" name="avApiKey" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className={inputClasses} />
-                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                            Required to fetch live market prices for your investments. 
-                            <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" className="ml-1 text-indigo-600 dark:text-indigo-400 hover:underline">Get a free key here.</a>
-                        </p>
-                    </div>
-                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <label className="flex items-center space-x-3 mb-4 cursor-pointer">
-                            <input type="checkbox" checked={chatbotEnabled} onChange={(e) => setChatbotEnabled(e.target.checked)} className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" />
-                            <span className="text-sm font-medium text-gray-900 dark:text-gray-300">Enable Google Gemini Chatbot</span>
-                        </label>
-                        {chatbotEnabled && (
+                    <div className="flex flex-col space-y-4">
+                        <div className="flex items-center justify-between">
                             <div>
-                                <label htmlFor="geminiApiKey" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Google Gemini API Key</label>
+                                <span className="text-sm font-medium text-gray-900 dark:text-gray-300">Alpha Vantage API</span>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Fetch live market prices for your investments.</p>
+                            </div>
+                            <Switch enabled={avEnabled} onChange={setAvEnabled} />
+                        </div>
+                        {avEnabled && (
+                            <div className="pl-4 border-l-2 border-indigo-100 dark:border-indigo-900 mt-2 space-y-2">
+                                <label htmlFor="avApiKey" className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Alpha Vantage API Key</label>
+                                <input type="password" id="avApiKey" name="avApiKey" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className={inputClasses} />
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline">Get a free key here.</a>
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <span className="text-sm font-medium text-gray-900 dark:text-gray-300">Google Gemini Chatbot</span>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">AI insights and automated entry creation.</p>
+                            </div>
+                            <Switch enabled={chatbotEnabled} onChange={setChatbotEnabled} />
+                        </div>
+                        {chatbotEnabled && (
+                            <div className="pl-4 border-l-2 border-indigo-100 dark:border-indigo-900 mt-4 space-y-2">
+                                <label htmlFor="geminiApiKey" className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Google Gemini API Key</label>
                                 <input type="password" id="geminiApiKey" name="geminiApiKey" value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} className={inputClasses} />
-                                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                    Required for AI Chatbot insights and entry creation. 
-                                    <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" className="ml-1 text-indigo-600 dark:text-indigo-400 hover:underline">Get a free key from Google AI Studio.</a>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline">Get a free key from Google AI Studio.</a>
                                 </p>
                             </div>
                         )}

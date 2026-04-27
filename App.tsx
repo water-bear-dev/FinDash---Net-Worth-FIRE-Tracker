@@ -126,6 +126,7 @@ const App: React.FC = () => {
     const [budgetItems, setBudgetItems] = useLocalStorage<BudgetItem[]>('budgetItems', sampleBudgetItems);
     const [userProfile, setUserProfile] = useLocalStorage<UserProfile>('userProfile', sampleUserProfile);
     const [avApiKey, setAvApiKey] = useLocalStorage<string>('avApiKey', '');
+    const [isAvEnabled, setIsAvEnabled] = useLocalStorage<boolean>('isAvEnabled', false);
     const [geminiApiKey, setGeminiApiKey] = useLocalStorage<string>('geminiApiKey', '');
     const [isChatbotEnabled, setIsChatbotEnabled] = useLocalStorage<boolean>('isChatbotEnabled', false);
     const [targetAnnualSpending, setTargetAnnualSpending] = useLocalStorage<number>('targetAnnualSpending', 60000);
@@ -154,7 +155,7 @@ const App: React.FC = () => {
                 if (!handle) return;
 
                 // Gather full backup JSON
-                const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'avApiKey', 'geminiApiKey', 'isChatbotEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
+                const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'avApiKey', 'isAvEnabled', 'geminiApiKey', 'isChatbotEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
                 const exportData: Record<string, any> = {};
                 keysToExport.forEach(key => {
                     const item = window.localStorage.getItem(key);
@@ -221,7 +222,7 @@ const App: React.FC = () => {
 
     // Refresh investment prices
     const refreshPrices = useCallback(async () => {
-        if (!avApiKey || holdings.length === 0) return;
+        if (!isAvEnabled || !avApiKey || holdings.length === 0) return;
         setIsPricesLoading(true);
         const tickers = holdings.map(h => h.ticker);
         const results = await fetchPricesFromAlphaVantage(tickers, avApiKey);
@@ -241,7 +242,7 @@ const App: React.FC = () => {
     }, [holdings]);
 
     useEffect(() => {
-        if(avApiKey && holdings.length > 0) {
+        if(isAvEnabled && avApiKey && holdings.length > 0) {
             refreshPrices();
         }
     }, [avApiKey, holdings.length]);
@@ -535,6 +536,8 @@ const App: React.FC = () => {
                                     saveUserProfile={setUserProfile}
                                     avApiKey={avApiKey}
                                     saveAvApiKey={setAvApiKey}
+                                    isAvEnabled={isAvEnabled}
+                                    saveIsAvEnabled={setIsAvEnabled}
                                     geminiApiKey={geminiApiKey}
                                     saveGeminiApiKey={setGeminiApiKey}
                                     isChatbotEnabled={isChatbotEnabled}

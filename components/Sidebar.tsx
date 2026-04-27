@@ -17,6 +17,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
     const iconClasses = `h-6 w-6 flex-shrink-0 ${isCollapsed ? '' : 'mr-3'}`;
     const brandIconClasses = `h-8 w-8 text-indigo-400 flex-shrink-0 ${isCollapsed ? '' : 'mr-2'}`;
     const textClasses = `whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`;
+    const sectionHeadingClasses = `text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-4 ml-3 ${isCollapsed ? 'hidden' : ''}`;
 
     return (
         <aside className={`bg-gray-800 text-white p-4 flex-col fixed h-full z-20 hidden sm:flex transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
@@ -24,31 +25,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
                 <BanknotesIcon className={brandIconClasses}/>
                 <span className={textClasses}>FinDash</span>
             </div>
-            <nav className="flex flex-col space-y-2 flex-grow">
+            <nav className="flex flex-col space-y-1 flex-grow overflow-y-auto no-scrollbar">
                 <NavLink to="/" className={navLinkClasses} title={isCollapsed ? 'Dashboard' : undefined}>
                     <HomeIcon className={iconClasses} />
                     <span className={textClasses}>Dashboard</span>
                 </NavLink>
-                <NavLink to="/manage" className={navLinkClasses} title={isCollapsed ? 'Manage Data' : undefined}>
-                    <TableCellsIcon className={iconClasses} />
-                    <span className={textClasses}>Manage Data</span>
-                </NavLink>
-                <NavLink to="/transactions" className={navLinkClasses} title={isCollapsed ? 'Ledger' : undefined}>
-                    <DocumentChartBarIcon className={iconClasses} />
-                    <span className={textClasses}>Ledger</span>
-                </NavLink>
-                <NavLink to="/investments" className={navLinkClasses} title={isCollapsed ? 'Investments' : undefined}>
-                    <ChartPieIcon className={iconClasses} />
-                    <span className={textClasses}>Investments</span>
-                </NavLink>
-                <NavLink to="/fire" className={navLinkClasses} title={isCollapsed ? 'FIRE Journey' : undefined}>
-                    <FireIcon className={iconClasses} />
-                    <span className={textClasses}>FIRE Journey</span>
-                </NavLink>
-                <NavLink to="/research" className={navLinkClasses} title={isCollapsed ? 'Market Research' : undefined}>
-                    <MagnifyingGlassIcon className={iconClasses} />
-                    <span className={textClasses}>Market Research</span>
-                </NavLink>
+
+                {/* Section: Daily Tracking */}
+                <div className={sectionHeadingClasses}>Daily Tracking</div>
                 <NavLink to="/incomes" className={navLinkClasses} title={isCollapsed ? 'Incomes' : undefined}>
                      <ArrowTrendingUpIcon className={iconClasses} />
                     <span className={textClasses}>Incomes</span>
@@ -61,8 +45,31 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
                     <CalendarIcon className={iconClasses} />
                     <span className={textClasses}>Calendar</span>
                 </NavLink>
+
+                {/* Section: Ledger and Investments */}
+                <div className={sectionHeadingClasses}>Ledger & Investments</div>
+                <NavLink to="/transactions" className={navLinkClasses} title={isCollapsed ? 'Ledger' : undefined}>
+                    <DocumentChartBarIcon className={iconClasses} />
+                    <span className={textClasses}>Ledger</span>
+                </NavLink>
+                <NavLink to="/investments" className={navLinkClasses} title={isCollapsed ? 'Investments' : undefined}>
+                    <ChartPieIcon className={iconClasses} />
+                    <span className={textClasses}>Investments</span>
+                </NavLink>
+
+                {/* Section: FIRE */}
+                <div className={sectionHeadingClasses}>FIRE</div>
+                <NavLink to="/fire" className={navLinkClasses} title={isCollapsed ? 'FIRE Journey' : undefined}>
+                    <FireIcon className={iconClasses} />
+                    <span className={textClasses}>FIRE Journey</span>
+                </NavLink>
             </nav>
-            <div className="mt-auto">
+
+            <div className="mt-auto space-y-1">
+                 <NavLink to="/manage" className={navLinkClasses} title={isCollapsed ? 'Manage Data' : undefined}>
+                    <TableCellsIcon className={iconClasses} />
+                    <span className={textClasses}>Manage Data</span>
+                </NavLink>
                  <NavLink to="/settings" className={navLinkClasses} title={isCollapsed ? 'Settings' : undefined}>
                     <Cog6ToothIcon className={iconClasses} />
                     <span className={textClasses}>Settings</span>
