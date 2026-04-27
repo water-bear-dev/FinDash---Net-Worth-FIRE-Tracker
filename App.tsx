@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
+import ChatbotWidget from './components/ChatbotWidget';
 import DashboardPage from './pages/DashboardPage';
 import ManageDataPage from './pages/ManageDataPage';
 import TransactionsPage from './pages/TransactionsPage';
@@ -125,6 +126,8 @@ const App: React.FC = () => {
     const [budgetItems, setBudgetItems] = useLocalStorage<BudgetItem[]>('budgetItems', sampleBudgetItems);
     const [userProfile, setUserProfile] = useLocalStorage<UserProfile>('userProfile', sampleUserProfile);
     const [avApiKey, setAvApiKey] = useLocalStorage<string>('avApiKey', '');
+    const [geminiApiKey, setGeminiApiKey] = useLocalStorage<string>('geminiApiKey', '');
+    const [isChatbotEnabled, setIsChatbotEnabled] = useLocalStorage<boolean>('isChatbotEnabled', false);
     const [targetAnnualSpending, setTargetAnnualSpending] = useLocalStorage<number>('targetAnnualSpending', 60000);
     const [fireSettings, setFireSettings] = useLocalStorage<FireSettings>('fireSettings', {
         swr: 4.0,
@@ -151,7 +154,7 @@ const App: React.FC = () => {
                 if (!handle) return;
 
                 // Gather full backup JSON
-                const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'avApiKey', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
+                const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'avApiKey', 'geminiApiKey', 'isChatbotEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
                 const exportData: Record<string, any> = {};
                 keysToExport.forEach(key => {
                     const item = window.localStorage.getItem(key);
@@ -532,6 +535,10 @@ const App: React.FC = () => {
                                     saveUserProfile={setUserProfile}
                                     avApiKey={avApiKey}
                                     saveAvApiKey={setAvApiKey}
+                                    geminiApiKey={geminiApiKey}
+                                    saveGeminiApiKey={setGeminiApiKey}
+                                    isChatbotEnabled={isChatbotEnabled}
+                                    saveIsChatbotEnabled={setIsChatbotEnabled}
                                     targetAnnualSpending={targetAnnualSpending}
                                     saveTargetAnnualSpending={setTargetAnnualSpending}
                                     currency={currency}
@@ -541,6 +548,17 @@ const App: React.FC = () => {
                             <Route path="*" element={<Navigate to="/" replace />} />
                         </Routes>
                     </main>
+                    {isChatbotEnabled && (
+                        <ChatbotWidget
+                            geminiApiKey={geminiApiKey}
+                            budgetItems={budgetItems}
+                            transactions={transactions}
+                            liabilities={liabilities}
+                            netWorth={netWorth}
+                            fireSettings={fireSettings}
+                            addBudgetItem={(item) => addOrUpdate(setBudgetItems, item)}
+                        />
+                    )}
                 </div>
             </div>
         </Router>

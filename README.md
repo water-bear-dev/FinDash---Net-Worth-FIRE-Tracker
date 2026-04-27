@@ -30,8 +30,13 @@ Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your bro
 *   **☁️ Data Portability & Automated Sync**: 
     *   **Zero-Knowledge Architecture**: All data lives strictly in your browser (`localStorage`). No external databases.
     *   **Automated Backups**: Connect a local folder (like your Google Drive desktop folder) and FinDash will silently back up your complete profile to a JSON file every hour.
-    *   **CSV Exports**: Export tabular data for transactions and budgets for use in Excel or other tools.
-    *   **Full JSON Import/Export**: Instantly transfer your profile to a new device.
+    *   **JSON Exports**: Export your tabular data (transactions, budgets) directly as JSON files.
+    *   **Full JSON Import/Export**: Instantly transfer your entire profile to a new device.
+*   **🤖 Google Gemini AI Assistant**: 
+    *   Integrate your own Gemini API key to activate a smart financial chatbot.
+    *   Ask questions about your net worth, expenses, and FIRE progress.
+    *   **Quick Action Chips**: One-tap prompts for common actions like adding expenses or summarizing net worth.
+    *   Guided step-by-step assistant for logging new earnings and expenses directly via chat.
 
 ## 🛠️ Tech Stack
 
@@ -42,6 +47,7 @@ Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your bro
 *   **Data Persistence**: LocalStorage (Browser)
 *   **APIs**: 
     *   [Alpha Vantage](https://www.alphavantage.co/) (Market Data)
+    *   [Google Gemini](https://aistudio.google.com/) (AI Chatbot Assistant)
 
 ## 🏁 Getting Started
 
@@ -91,16 +97,36 @@ To unlock the full power of the dashboard, you need to configure a few settings 
     *   In **Settings**, set your **Target Annual Spending** (this drives the FIRE progress calculations).
     *   Set your preferred **Currency** (e.g., USD, AUD, EUR).
 
+3.  **Google Gemini AI Assistant (Optional)**:
+    *   In **Settings**, toggle **Enable Google Gemini Chatbot**.
+    *   Enter your **Gemini API Key**.
+    *   *Note: You can get a free API key from [Google AI Studio](https://aistudio.google.com/).*
+    *   A chat icon will appear in the bottom right corner of the dashboard once a valid key is provided.
+
+4.  **Summary of Required API Keys**:
+    *   **Alpha Vantage**: Required for real-time stock and ETF pricing in the Investment Portfolio.
+    *   **Google Gemini**: Required for the AI Financial Assistant and chatbot capabilities.
+
 ## 🛡️ Privacy & Data Portability
 
 This application is designed with privacy first. **All your financial data is stored locally in your browser's LocalStorage.** No personal financial data is ever sent to a remote server or database managed by this project. API calls are made directly from your browser to the data providers (Alpha Vantage).
 
 ### Data Backup & Migration (Export / Import)
 Since there is no centralized database, your data does not automatically sync across devices. To migrate your data (e.g., from your laptop to your phone) or create a safe backup:
+
+**Manual Export/Import:**
 1. Go to **Settings**.
 2. Scroll down to **Data Backup & Restore**.
-3. Click **Export Backup (JSON)** to download your current data.
-4. On your new device, click **Import Backup** and select the `.json` file. Your browser will instantly load your data.
+3. Click **Export Backup (JSON)** to download your current data file.
+4. On your new device, click **Import Backup** and select that `.json` file. Your browser will instantly load your data.
+
+**Automated Cloud Sync (Google Drive / OneDrive / Dropbox):**
+FinDash can automatically back up your data to your preferred cloud provider by leveraging their desktop "Sync" folders:
+1. Ensure you have your cloud provider's desktop app installed (e.g., Google Drive for Desktop).
+2. In FinDash, go to **Settings** > **Background Sync**.
+3. Click **Connect Local Sync Folder** and select a folder inside your cloud-synced directory (e.g., `Documents/FinDashBackups`).
+4. **Important**: If no backup file exists in that folder, FinDash will automatically create a new `findash-backup.json` for you.
+5. The app will now silently update this file every hour, ensuring your cloud storage always has the latest version of your data.
 
 **Technical Specifications & Considerations:**
 *   **Storage Limits**: Your browser's LocalStorage typically has a limit of around 5MB. Because FinDash only stores text/JSON data, it is extremely difficult to hit this limit through normal usage, ensuring years of seamless tracking.

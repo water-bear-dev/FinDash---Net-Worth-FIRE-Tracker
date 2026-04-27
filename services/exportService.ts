@@ -1,45 +1,18 @@
 import { Transaction, BudgetItem } from '../types';
 import moment from 'moment';
 
-export const exportTransactionsToCSV = (transactions: Transaction[]) => {
-    const headers = ['Date', 'Type', 'Amount', 'Category', 'Description'];
-    const rows = transactions.map(t => [
-        t.date,
-        t.type,
-        t.amount.toString(),
-        t.category,
-        `"${(t.description || '').replace(/"/g, '""')}"`
-    ]);
-
-    const csvContent = [
-        headers.join(','),
-        ...rows.map(e => e.join(','))
-    ].join('\n');
-
-    downloadCSV(csvContent, `findash-transactions-${moment().format('YYYY-MM-DD')}.csv`);
+export const exportTransactionsToJSON = (transactions: Transaction[]) => {
+    const jsonContent = JSON.stringify(transactions, null, 2);
+    downloadJSON(jsonContent, `findash-transactions-${moment().format('YYYY-MM-DD')}.json`);
 };
 
-export const exportBudgetToCSV = (budgetItems: BudgetItem[]) => {
-    const headers = ['Name', 'Amount', 'Type', 'Frequency', 'Category', 'Next Due Date'];
-    const rows = budgetItems.map(b => [
-        `"${b.name.replace(/"/g, '""')}"`,
-        b.amount.toString(),
-        b.type,
-        b.frequency,
-        b.category,
-        b.nextDueDate || ''
-    ]);
-
-    const csvContent = [
-        headers.join(','),
-        ...rows.map(e => e.join(','))
-    ].join('\n');
-
-    downloadCSV(csvContent, `findash-budget-${moment().format('YYYY-MM-DD')}.csv`);
+export const exportBudgetToJSON = (budgetItems: BudgetItem[]) => {
+    const jsonContent = JSON.stringify(budgetItems, null, 2);
+    downloadJSON(jsonContent, `findash-budget-${moment().format('YYYY-MM-DD')}.json`);
 };
 
-function downloadCSV(csvContent: string, filename: string) {
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+function downloadJSON(jsonContent: string, filename: string) {
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);

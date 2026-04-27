@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Transaction, BudgetItem } from '../types';
 import Card from '../components/Card';
-import { exportTransactionsToCSV, exportBudgetToCSV } from '../services/exportService';
+import { exportTransactionsToJSON, exportBudgetToJSON } from '../services/exportService';
 import { getDirectoryHandle, saveDirectoryHandle, syncDataToDirectory, verifyPermission } from '../services/syncService';
 import moment from 'moment';
 
@@ -23,6 +23,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     saveUserProfile, 
     avApiKey, 
     saveAvApiKey,
+    geminiApiKey,
+    saveGeminiApiKey,
+    isChatbotEnabled,
+    saveIsChatbotEnabled,
     targetAnnualSpending,
     saveTargetAnnualSpending,
     currency,
@@ -31,6 +35,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     const [profile, setProfile] = useState<UserProfile>(userProfile);
     const [apiKey, setApiKey] = useState(avApiKey);
     const [spending, setSpending] = useState(targetAnnualSpending);
+    const [geminiKey, setGeminiKey] = useState(geminiApiKey);
+    const [chatbotEnabled, setChatbotEnabled] = useState(isChatbotEnabled);
     const [currentCurrency, setCurrentCurrency] = useState(currency);
     const [syncDirName, setSyncDirName] = useState<string | null>(null);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -39,6 +45,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     useEffect(() => { setProfile(userProfile); }, [userProfile]);
     useEffect(() => { setApiKey(avApiKey); }, [avApiKey]);
     useEffect(() => { setSpending(targetAnnualSpending); }, [targetAnnualSpending]);
+    useEffect(() => { setGeminiKey(geminiApiKey); }, [geminiApiKey]);
+    useEffect(() => { setChatbotEnabled(isChatbotEnabled); }, [isChatbotEnabled]);
     useEffect(() => { setCurrentCurrency(currency); }, [currency]);
 
     useEffect(() => {
@@ -51,7 +59,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     }, []);
 
     const handleProfileSubmit = (e: React.FormEvent) => { e.preventDefault(); saveUserProfile(profile); alert('Profile saved!'); };
-    const handleApiSubmit = (e: React.FormEvent) => { e.preventDefault(); saveAvApiKey(apiKey); alert('API Key saved!'); };
+    const handleApiSubmit = (e: React.FormEvent) => { 
+        e.preventDefault(); 
+        saveAvApiKey(apiKey); 
+        saveGeminiApiKey(geminiKey);
+        saveIsChatbotEnabled(chatbotEnabled);
+        alert('API Keys and settings saved!'); 
+    };
     const handleFireSubmit = (e: React.FormEvent) => { e.preventDefault(); saveTargetAnnualSpending(spending); alert('FIRE goal saved!'); };
     const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newCurrency = e.target.value;
@@ -60,7 +74,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     }
     
     const handleExport = () => {
-            const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'avApiKey', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
+            const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'avApiKey', 'geminiApiKey', 'isChatbotEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
         const exportData: Record<string, any> = {};
         
         keysToExport.forEach(key => {
@@ -113,19 +127,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         reader.readAsText(file);
     };
 
-    const handleExportTransactionsCSV = () => {
+    const handleExportTransactionsJSON = () => {
         const transactionsStr = window.localStorage.getItem('transactions');
         if (transactionsStr) {
-            exportTransactionsToCSV(JSON.parse(transactionsStr) as Transaction[]);
+            exportTransactionsToJSON(JSON.parse(transactionsStr) as Transaction[]);
         } else {
             alert('No transactions found to export.');
         }
     };
 
-    const handleExportBudgetCSV = () => {
+    const handleExportBudgetJSON = () => {
         const budgetStr = window.localStorage.getItem('budgetItems');
         if (budgetStr) {
-            exportBudgetToCSV(JSON.parse(budgetStr) as BudgetItem[]);
+            exportBudgetToJSON(JSON.parse(budgetStr) as BudgetItem[]);
         } else {
             alert('No budget items found to export.');
         }
@@ -232,16 +246,33 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                 </form>
             </Card>
 
-            <Card title="API Keys">
+            <Card title="API Keys & Integrations">
                  <form onSubmit={handleApiSubmit} className="space-y-4">
                     <div>
                         <label htmlFor="avApiKey" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Alpha Vantage API Key</label>
                         <input type="password" id="avApiKey" name="avApiKey" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className={inputClasses} />
                         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                            Required to fetch live market prices for your investments. Get a free key from <a href="https://site.financialmodelingprep.com/developer/docs" target="_blank" rel="noopener noreferrer" className="text-indigo-500 hover:underline">FMP</a>.
+                            Required to fetch live market prices for your investments. 
+                            <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" className="ml-1 text-indigo-600 dark:text-indigo-400 hover:underline">Get a free key here.</a>
                         </p>
                     </div>
-                     <button type="submit" className={btnPrimaryClasses}>Save API Key</button>
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <label className="flex items-center space-x-3 mb-4 cursor-pointer">
+                            <input type="checkbox" checked={chatbotEnabled} onChange={(e) => setChatbotEnabled(e.target.checked)} className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" />
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-300">Enable Google Gemini Chatbot</span>
+                        </label>
+                        {chatbotEnabled && (
+                            <div>
+                                <label htmlFor="geminiApiKey" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Google Gemini API Key</label>
+                                <input type="password" id="geminiApiKey" name="geminiApiKey" value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} className={inputClasses} />
+                                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                    Required for AI Chatbot insights and entry creation. 
+                                    <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" className="ml-1 text-indigo-600 dark:text-indigo-400 hover:underline">Get a free key from Google AI Studio.</a>
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                     <button type="submit" className={btnPrimaryClasses}>Save Settings</button>
                 </form>
             </Card>
             
@@ -260,15 +291,18 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
             <Card title="Data Backup & Export">
                 <div className="space-y-6 text-sm text-gray-600 dark:text-gray-400">
+                    <p className="p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-lg text-indigo-700 dark:text-indigo-300 text-xs">
+                        <strong>Migration Guide:</strong> To move your data to a new device, use "Export Full Backup" to get a JSON file, then use "Import Backup" on the new device to restore everything.
+                    </p>
                     <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-white mb-2">CSV Exports</h4>
-                        <p className="mb-3">Download your tabular data for use in Excel, Google Sheets, or other tools.</p>
+                        <h4 className="font-semibold text-gray-900 dark:text-white mb-2">JSON Exports</h4>
+                        <p className="mb-3">Download your raw data as JSON files.</p>
                         <div className="flex flex-col sm:flex-row gap-4">
-                            <button type="button" onClick={handleExportTransactionsCSV} className={`${btnSecondaryClasses} w-full sm:w-auto`}>
-                                Export Transactions
+                            <button type="button" onClick={handleExportTransactionsJSON} className={`${btnSecondaryClasses} w-full sm:w-auto`}>
+                                Export Transactions (JSON)
                             </button>
-                            <button type="button" onClick={handleExportBudgetCSV} className={`${btnSecondaryClasses} w-full sm:w-auto`}>
-                                Export Budget Items
+                            <button type="button" onClick={handleExportBudgetJSON} className={`${btnSecondaryClasses} w-full sm:w-auto`}>
+                                Export Budget Items (JSON)
                             </button>
                         </div>
                     </div>
@@ -302,6 +336,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                 <div className="space-y-4 text-sm text-gray-600 dark:text-gray-400">
                     <p>
                         Select a folder on your computer (e.g., a Google Drive desktop sync folder, iCloud Drive, or Dropbox folder). FinDash will save an up-to-date <code>findash-sync.json</code> file to this location.
+                    </p>
+                    <p className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-lg text-amber-700 dark:text-amber-300 text-xs">
+                        <strong>Tip:</strong> If no file exists in the folder, a new one will be created automatically. This ensures your data is always backed up to your cloud storage.
                     </p>
                     <p className="text-xs text-amber-600 dark:text-amber-400">
                         * Note: This uses the File System Access API. Your browser may occasionally ask you to re-verify permissions for security reasons.

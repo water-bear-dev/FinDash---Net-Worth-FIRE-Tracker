@@ -5,13 +5,18 @@ All notable changes to the **FinDash** project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Google Gemini Chatbot Assistant**:
+  - Global floating chat widget powered by Google Gemini (BYO API Key).
+  - Context-aware financial assistant that understands your net worth, expenses, and FIRE progress.
+  - **Quick Prompts**: Integrated clickable chips for common queries and actions to speed up interactions.
+  - Guided step-by-step assistant capable of creating and logging new budget items (expenses/earnings) directly via chat conversation.
 - **Phase 5: Premium UI & Data Visualization**:
   - **Glassmorphism Overhaul**: Transformed the primary UI cards with `backdrop-blur` and translucent backgrounds for a modern look.
   - **Micro-animations**: Integrated `framer-motion` for buttery smooth spring transitions on hover states.
   - **Historical Net Worth Chart**: Added automated, month-by-month Net Worth tracking visualized via a `recharts` line chart on the dashboard.
   - **Asset Allocation Heatmap**: Introduced a new `Treemap` visualization on the dashboard to visualize proportional portfolio sizes.
 - **Data Portability & Sync**:
-  - Export capabilities for Transactions and Budget Items to tabular CSV format.
+  - Transitioned export capabilities for Transactions and Budget Items from CSV to JSON format.
   - Integration with the File System Access API to connect a local folder (e.g., Google Drive Desktop folder) as an "Always True" sync directory.
   - Hourly background synchronization service that silently dumps a full JSON backup into the selected local directory without manual intervention.
 - `FIRESimulator.tsx` and `fireSimulation.ts`: Integrated an advanced FIRE engine with Monte Carlo simulations to calculate portfolio survival probability over retirement years.
