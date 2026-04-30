@@ -46,7 +46,7 @@ Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your bro
 *   **Routing**: [React Router v7](https://reactrouter.com/)
 *   **Data Persistence**: LocalStorage (Browser)
 *   **APIs**: 
-    *   [Alpha Vantage](https://www.alphavantage.co/) (Market Data)
+    *   **Local Price Server** (Yahoo Finance via yfinance)
     *   [Google Gemini](https://aistudio.google.com/) (AI Chatbot Assistant)
 
 ## 🏁 Getting Started
@@ -88,11 +88,18 @@ python3 scripts/with_server.py --server "npm run dev" --port 3000 -- python3 tes
 
 To unlock the full power of the dashboard, you need to configure a few settings inside the app:
 
-1.  **Market Data (Stock Prices)**:
-    *   Go to the **Settings** page within the app.
-    *   Enter your **Alpha Vantage** API Key.
-    *   *Note: You can get a free API key from [alphavantage.co](https://www.alphavantage.co/support/#api-key).*
-    
+1.  **Market Data (Stock Prices)**: 
+    FinDash uses a bundled Python microservice to fetch real-time market data without requiring expensive API keys or hitting strict cloud limits.
+
+    **How to start the Price Server**:
+    1. Open a new terminal and navigate to the `price-server` directory.
+    2. Install dependencies: `pip install -r requirements.txt`
+    3. Start the server: `python3 main.py`
+    *The server runs on http://localhost:8001 by default.*
+
+    **Enable in App**:
+    In FinDash **Settings**, ensure the **Local Price Server** toggle is enabled (it is ON by default).
+
 2.  **Profile & Goals**:
     *   In **Settings**, set your **Target Annual Spending** (this drives the FIRE progress calculations).
     *   Set your preferred **Currency** (e.g., USD, AUD, EUR).
@@ -103,13 +110,13 @@ To unlock the full power of the dashboard, you need to configure a few settings 
     *   *Note: You can get a free API key from [Google AI Studio](https://aistudio.google.com/).*
     *   A chat icon will appear in the bottom right corner of the dashboard once a valid key is provided.
 
-4.  **Summary of Required API Keys**:
-    *   **Alpha Vantage**: Required for real-time stock and ETF pricing in the Investment Portfolio.
-    *   **Google Gemini**: Required for the AI Financial Assistant and chatbot capabilities.
+3.  **Required Integrations**:
+    *   **Python 3.9+**: Required to run the background `price-server`.
+    *   **Google Gemini API Key**: Required for the AI Financial Assistant chatbot.
 
 ## 🛡️ Privacy & Data Portability
 
-This application is designed with privacy first. **All your financial data is stored locally in your browser's LocalStorage.** No personal financial data is ever sent to a remote server or database managed by this project. API calls are made directly from your browser to the data providers (Alpha Vantage).
+This application is designed with privacy first. **All your financial data is stored locally in your browser's LocalStorage.** No personal financial data is ever sent to a remote server or database managed by this project. Market data requests are made to your own local Python server (`localhost:8001`).
 
 ### Data Backup & Migration (Export / Import)
 Since there is no centralized database, your data does not automatically sync across devices. To migrate your data (e.g., from your laptop to your phone) or create a safe backup:

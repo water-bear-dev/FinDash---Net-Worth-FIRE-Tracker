@@ -4,9 +4,7 @@ import Card from '../components/Card';
 import AllocationDonutChart from '../components/AllocationDonutChart';
 import ConfirmationModal from '../components/ConfirmationModal';
 import TransactionHistoryTable from '../components/TransactionHistoryTable';
-import { fetchUpcomingDividends } from '../services/marketDataService';
 import { CalendarDaysIcon } from '@heroicons/react/24/outline';
-import ApiKeyWarning from '../components/ApiKeyWarning';
 
 interface TransactionsPageProps {
     transactions: Transaction[];
@@ -17,7 +15,6 @@ interface TransactionsPageProps {
     addDividend: (dividend: Omit<Dividend, 'id'>) => void;
     removeDividend: (id: string) => void;
     formatCurrency: (value: number) => string;
-    avApiKey: string;
 }
 
 const TransactionModal: React.FC<{
@@ -130,7 +127,6 @@ const InvestmentTradingPage: React.FC<TransactionsPageProps> = ({
     addDividend,
     removeDividend,
     formatCurrency,
-    avApiKey,
 }) => {
     const [isTransactionModalOpen, setTransactionModalOpen] = useState(false);
     const [isDividendModalOpen, setDividendModalOpen] = useState(false);

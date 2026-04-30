@@ -5,6 +5,34 @@ All notable changes to the **FinDash** project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Price Server Hardening**:
+  - Migrated price server to port `8001` to prevent conflicts with other financial projects.
+  - Implemented thread-safe batch processing with `yfinance` for significantly faster portfolio refreshes.
+  - Added historical price fallbacks (5-day window) to ensure data availability on weekends and market holidays.
+  - Added `/search` endpoint for real-time ticker and company name lookup.
+  - Upgraded `yfinance` to `v1.2.0+` to resolve Yahoo Finance API connection issues.
+
+### Removed
+- **Alpha Vantage Integration**:
+  - Completely decoupled the application from Alpha Vantage.
+  - Removed all `avApiKey` and `isAvEnabled` state, UI components, and logic.
+  - Eliminated the "Missing API Key" warnings across all pages.
+- **FinOps Observability**:
+  - Removed legacy AI cost tracking and token observability features to simplify the codebase for personal use.
+
+### Changed
+- **Default Pricing Engine**: Set the Local Price Server as the default (and only) market data provider.
+- **Stability Fixes**: Resolved "white screen" rendering issues caused by dangling Alpha Vantage references in the dashboard.
+
+### Added
+- **Local yfinance Price Server**:
+  - Built a local Python/FastAPI microservice (`price-server`) to fetch real-time market prices without hitting cloud API limits.
+  - Implemented a "Local yfinance Server" toggle in Settings to seamlessly bypass Alpha Vantage integration.
+- **Advanced Portfolio Rebalancing**:
+  - Implemented the "Square Root Rule" for optimal rebalancing frequency mathematically balancing brokerage fees vs opportunity costs.
+  - Added "Next Best Buy" highlighting to visually indicate which asset is most deficient from its target allocation.
+- **Data Deletion Confirmation**: Added an explicit text confirmation ("delete my data") prompt when resetting the application data to prevent accidental loss.
+
 - **Google Gemini Chatbot Assistant**:
   - Global floating chat widget powered by Google Gemini (BYO API Key).
   - Context-aware financial assistant that understands your net worth, expenses, and FIRE progress.

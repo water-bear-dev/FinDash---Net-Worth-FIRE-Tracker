@@ -8,10 +8,6 @@ import moment from 'moment';
 interface SettingsPageProps {
     userProfile: UserProfile;
     saveUserProfile: (profile: UserProfile) => void;
-    avApiKey: string;
-    saveAvApiKey: (key: string) => void;
-    isAvEnabled: boolean;
-    saveIsAvEnabled: (enabled: boolean) => void;
     geminiApiKey: string;
     saveGeminiApiKey: (key: string) => void;
     isChatbotEnabled: boolean;
@@ -20,6 +16,8 @@ interface SettingsPageProps {
     saveTargetAnnualSpending: (value: number) => void;
     currency: string;
     saveCurrency: (currency: string) => void;
+    useLocalPriceServer: boolean;
+    saveUseLocalPriceServer: (enabled: boolean) => void;
 }
 
 const Switch: React.FC<{ enabled: boolean; onChange: (enabled: boolean) => void }> = ({ enabled, onChange }) => (
@@ -32,10 +30,6 @@ const Switch: React.FC<{ enabled: boolean; onChange: (enabled: boolean) => void 
 const SettingsPage: React.FC<SettingsPageProps> = ({ 
     userProfile, 
     saveUserProfile, 
-    avApiKey, 
-    saveAvApiKey,
-    isAvEnabled,
-    saveIsAvEnabled,
     geminiApiKey,
     saveGeminiApiKey,
     isChatbotEnabled,
@@ -44,10 +38,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     saveTargetAnnualSpending,
     currency,
     saveCurrency,
+    useLocalPriceServer,
+    saveUseLocalPriceServer,
 }) => {
     const [profile, setProfile] = useState<UserProfile>(userProfile);
-    const [apiKey, setApiKey] = useState(avApiKey);
-    const [avEnabled, setAvEnabled] = useState(isAvEnabled);
+    const [localPriceServerEnabled, setLocalPriceServerEnabled] = useState(useLocalPriceServer);
     const [spending, setSpending] = useState(targetAnnualSpending);
     const [geminiKey, setGeminiKey] = useState(geminiApiKey);
     const [chatbotEnabled, setChatbotEnabled] = useState(isChatbotEnabled);
@@ -61,12 +56,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     const [importConfirmModal, setImportConfirmModal] = useState<{ isOpen: boolean; data: any }>({ isOpen: false, data: null });
 
     useEffect(() => { setProfile(userProfile); }, [userProfile]);
-    useEffect(() => { setApiKey(avApiKey); }, [avApiKey]);
-    useEffect(() => { setAvEnabled(isAvEnabled); }, [isAvEnabled]);
     useEffect(() => { setSpending(targetAnnualSpending); }, [targetAnnualSpending]);
     useEffect(() => { setGeminiKey(geminiApiKey); }, [geminiApiKey]);
     useEffect(() => { setChatbotEnabled(isChatbotEnabled); }, [isChatbotEnabled]);
     useEffect(() => { setCurrentCurrency(currency); }, [currency]);
+    useEffect(() => { setLocalPriceServerEnabled(useLocalPriceServer); }, [useLocalPriceServer]);
 
     useEffect(() => {
         getDirectoryHandle().then(handle => {
@@ -90,11 +84,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
     const handleApiSubmit = (e: React.FormEvent) => { 
         e.preventDefault(); 
-        saveAvApiKey(apiKey); 
-        saveIsAvEnabled(avEnabled);
-        saveGeminiApiKey(geminiKey);
+        saveGeminiApiKey(geminiKey); 
         saveIsChatbotEnabled(chatbotEnabled);
-        showSuccess('API Keys and settings saved!'); 
+        saveUseLocalPriceServer(localPriceServerEnabled);
+        showSuccess('API settings saved successfully!');
     };
 
     const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -104,7 +97,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     }
     
     const handleExport = () => {
-        const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'avApiKey', 'isAvEnabled', 'geminiApiKey', 'isChatbotEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
+        const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'geminiApiKey', 'isChatbotEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
         const exportData: Record<string, any> = {};
         keysToExport.forEach(key => {
             const item = window.localStorage.getItem(key);
@@ -257,17 +250,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                     <div className="flex flex-col space-y-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <span className="text-sm font-medium text-gray-900 dark:text-gray-300">Alpha Vantage API</span>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Fetch live market prices for your investments.</p>
+                                <span className="text-sm font-medium text-gray-900 dark:text-gray-300">Local yfinance Server</span>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Fetch free market prices via local Python microservice (port 8000).</p>
                             </div>
-                            <Switch enabled={avEnabled} onChange={setAvEnabled} />
+                            <Switch enabled={localPriceServerEnabled} onChange={setLocalPriceServerEnabled} />
                         </div>
-                        {avEnabled && (
-                            <div className="pl-4 border-l-2 border-indigo-100 dark:border-indigo-900 mt-2 space-y-2 animate-in slide-in-from-left-2 duration-300">
-                                <label htmlFor="avApiKey" className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Alpha Vantage API Key <span className="text-red-500">*</span></label>
-                                <input type="password" id="avApiKey" name="avApiKey" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className={inputClasses} required />
-                            </div>
-                        )}
                     </div>
 
                     <div className="pt-4 border-t border-gray-200 dark:border-gray-700">

@@ -15,9 +15,8 @@ import FIREPage from './pages/FIREPage';
 import InvestmentsPage from './pages/InvestmentsPage';
 import { 
     CashAccount, Investment, Property, Liability, Transaction, 
-    Dividend, BudgetItem, UserProfile, AssetCategory, TargetAllocation, FireSettings, RebalancingSettings
+    Dividend, BudgetItem, UserProfile, AssetCategory, TargetAllocation, FireSettings, RebalancingSettings, HistoricalNetWorth
 } from './types';
-import { fetchInvestmentPrices } from './services/marketDataService';
 import moment from 'moment';
 import { generateRecurringEvents } from './services/eventGenerator';
 import { v4 as uuidv4 } from 'uuid';
@@ -126,8 +125,7 @@ const App: React.FC = () => {
     const [dividends, setDividends] = useLocalStorage<Dividend[]>('dividends', []);
     const [budgetItems, setBudgetItems] = useLocalStorage<BudgetItem[]>('budgetItems', []);
     const [userProfile, setUserProfile] = useLocalStorage<UserProfile>('userProfile', { name: '', email: '' });
-    const [avApiKey, setAvApiKey] = useLocalStorage<string>('avApiKey', '');
-    const [isAvEnabled, setIsAvEnabled] = useLocalStorage<boolean>('isAvEnabled', false);
+    const [useLocalPriceServer, setUseLocalPriceServer] = useLocalStorage<boolean>('useLocalPriceServer', true);
     const [geminiApiKey, setGeminiApiKey] = useLocalStorage<string>('geminiApiKey', '');
     const [isChatbotEnabled, setIsChatbotEnabled] = useLocalStorage<boolean>('isChatbotEnabled', false);
     const [targetAnnualSpending, setTargetAnnualSpending] = useLocalStorage<number>('targetAnnualSpending', 60000);
@@ -148,7 +146,6 @@ const App: React.FC = () => {
     const [historicalNetWorth, setHistoricalNetWorth] = useLocalStorage<HistoricalNetWorth[]>('historicalNetWorth', []);
     const [isSetupComplete, setIsSetupComplete] = useLocalStorage<boolean>('isSetupComplete', false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-
     const [isPricesLoading, setIsPricesLoading] = useState(false);
 
     const completeSetup = (data: { 
@@ -178,7 +175,7 @@ const App: React.FC = () => {
                 if (!handle) return;
 
                 // Gather full backup JSON
-                const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'avApiKey', 'isAvEnabled', 'geminiApiKey', 'isChatbotEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
+                const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'geminiApiKey', 'isChatbotEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
                 const exportData: Record<string, any> = {};
                 keysToExport.forEach(key => {
                     const item = window.localStorage.getItem(key);
@@ -245,19 +242,36 @@ const App: React.FC = () => {
 
     // Refresh investment prices
     const refreshPrices = useCallback(async () => {
-        if (!isAvEnabled || !avApiKey || holdings.length === 0) return;
+        if (holdings.length === 0) return;
+        
+        // If local server is not enabled, we can't fetch
+        if (!useLocalPriceServer) {
+             return;
+        }
+
         setIsPricesLoading(true);
         const tickers = holdings.map(h => h.ticker);
-        const results = await fetchPricesFromAlphaVantage(tickers, avApiKey);
-        
-        const priceMap = new Map(results.map(p => [p.symbol, p.price]));
-        
-        setInvestments(holdings.map(inv => ({
-            ...inv,
-            currentValue: (priceMap.get(inv.ticker) || 0) * inv.quantity
-        })));
-        setIsPricesLoading(false);
-    }, [avApiKey, holdings]);
+        let results: { symbol: string; price: number }[] = [];
+
+        try {
+            if (useLocalPriceServer) {
+                const response = await fetch(`http://localhost:8001/prices?tickers=${tickers.join(',')}`);
+                if (!response.ok) throw new Error('Local server responded with an error');
+                results = await response.json();
+            }
+            
+            const priceMap = new Map(results.map(p => [p.symbol, p.price]));
+            
+            setInvestments(holdings.map(inv => ({
+                ...inv,
+                currentValue: (priceMap.get(inv.ticker) || 0) * inv.quantity
+            })));
+        } catch (error) {
+            console.error('Error refreshing prices:', error);
+        } finally {
+            setIsPricesLoading(false);
+        }
+    }, [useLocalPriceServer, holdings]);
 
     useEffect(() => {
          const initialInvestments = holdings.map(h => ({ ...h, currentValue: 0 }));
@@ -265,10 +279,10 @@ const App: React.FC = () => {
     }, [holdings]);
 
     useEffect(() => {
-        if(isAvEnabled && avApiKey && holdings.length > 0) {
+        if(useLocalPriceServer && holdings.length > 0) {
             refreshPrices();
         }
-    }, [avApiKey, holdings.length]);
+    }, [useLocalPriceServer, holdings.length, refreshPrices]);
 
 
     // CRUD functions
@@ -479,7 +493,6 @@ const App: React.FC = () => {
                                     refreshPrices={refreshPrices}
                                     isPricesLoading={isPricesLoading}
                                     formatCurrency={formatCurrency}
-                                    avApiKey={avApiKey}
                                 />
                             } />
                             <Route path="/manage" element={
@@ -509,7 +522,6 @@ const App: React.FC = () => {
                                     addDividend={(item) => addOrUpdate(setDividends, item)}
                                     removeDividend={(id) => remove(setDividends, id)}
                                     formatCurrency={formatCurrency}
-                                    avApiKey={avApiKey}
                                 />
                             } />
                              <Route path="/incomes" element={
@@ -559,7 +571,6 @@ const App: React.FC = () => {
                                     holdings={investments} 
                                     refreshPrices={refreshPrices} 
                                     isPricesLoading={isPricesLoading}
-                                    avApiKey={avApiKey}
                                     targetAllocations={targetAllocations}
                                     setTargetAllocations={setTargetAllocations}
                                     rebalancingSettings={rebalancingSettings}
@@ -572,10 +583,6 @@ const App: React.FC = () => {
                                 <SettingsPage
                                     userProfile={userProfile}
                                     saveUserProfile={setUserProfile}
-                                    avApiKey={avApiKey}
-                                    saveAvApiKey={setAvApiKey}
-                                    isAvEnabled={isAvEnabled}
-                                    saveIsAvEnabled={setIsAvEnabled}
                                     geminiApiKey={geminiApiKey}
                                     saveGeminiApiKey={setGeminiApiKey}
                                     isChatbotEnabled={isChatbotEnabled}
@@ -584,6 +591,8 @@ const App: React.FC = () => {
                                     saveTargetAnnualSpending={setTargetAnnualSpending}
                                     currency={currency}
                                     saveCurrency={setCurrency}
+                                    useLocalPriceServer={useLocalPriceServer}
+                                    saveUseLocalPriceServer={setUseLocalPriceServer}
                                 />
                             } />
                             <Route path="*" element={<Navigate to="/" replace />} />
