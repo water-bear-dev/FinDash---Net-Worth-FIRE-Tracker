@@ -67,11 +67,22 @@ Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your bro
     npm install
     ```
 
-3.  **Run the app:**
+3.  **Run the application (requires 2 terminal windows):**
+
+    **Terminal 1: Start the Frontend (React)**
     ```bash
     npm run dev
     ```
     Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+    **Terminal 2: Start the Market Data Engine (Python)**
+    The app requires a local Python microservice to fetch live stock prices for your portfolio.
+    ```bash
+    cd price-server
+    pip install -r requirements.txt
+    python3 main.py
+    ```
+    *This server will run on http://localhost:8001 and automatically handle rate limiting and caching.*
 
 ### 🧪 Testing
 
@@ -89,14 +100,8 @@ python3 scripts/with_server.py --server "npm run dev" --port 3000 -- python3 tes
 To unlock the full power of the dashboard, you need to configure a few settings inside the app:
 
 1.  **Market Data (Stock Prices)**: 
-    FinDash uses a bundled Python microservice to fetch real-time market data without requiring expensive API keys or hitting strict cloud limits.
-
-    **How to start the Price Server**:
-    1. Open a new terminal and navigate to the `price-server` directory.
-    2. Install dependencies: `pip install -r requirements.txt`
-    3. Start the server: `python3 main.py`
-    *The server runs on http://localhost:8001 by default.*
-
+    FinDash uses a bundled Python microservice to fetch real-time market data without requiring expensive API keys or hitting strict cloud limits. Ensure you have started the server in Terminal 2 (as outlined in the **Getting Started** section).
+    
     **Enable in App**:
     In FinDash **Settings**, ensure the **Local Price Server** toggle is enabled (it is ON by default).
 

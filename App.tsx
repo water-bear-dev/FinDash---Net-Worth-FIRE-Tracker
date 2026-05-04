@@ -281,6 +281,13 @@ const App: React.FC = () => {
     useEffect(() => {
         if(useLocalPriceServer && holdings.length > 0) {
             refreshPrices();
+
+            // Automated checking of tickers every 5 minutes (300,000 ms)
+            const intervalId = setInterval(() => {
+                refreshPrices();
+            }, 300000);
+
+            return () => clearInterval(intervalId);
         }
     }, [useLocalPriceServer, holdings.length, refreshPrices]);
 
@@ -386,6 +393,23 @@ const App: React.FC = () => {
             return newItems;
         });
     };
+    const addBudgetItemAndUpdateCash = (item: BudgetItem | Omit<BudgetItem, 'id'>) => {
+        addOrUpdate(setBudgetItems, item);
+        
+        // Auto-update Net Worth (Cash Account) for realized, non-recurring transactions
+        const itemDate = moment(item.date);
+        if (itemDate.isSameOrBefore(moment(), 'day') && !item.isRecurring) {
+            setCashAccounts(prev => {
+                const change = item.type === 'income' ? item.amount : -item.amount;
+                if (prev.length === 0) {
+                    return [{ id: Date.now().toString(), name: 'Main Wallet', balance: change }];
+                }
+                const newAccounts = [...prev];
+                newAccounts[0] = { ...newAccounts[0], balance: newAccounts[0].balance + change };
+                return newAccounts;
+            });
+        }
+    };
 
     const addTransactionAndUpdateBudget = (transaction: Omit<Transaction, 'id'>) => {
         addOrUpdate(setTransactions, transaction);
@@ -398,7 +422,7 @@ const App: React.FC = () => {
                 type: 'expense',
                 isRecurring: false
             };
-            addOrUpdate(setBudgetItems, budgetItem);
+            addBudgetItemAndUpdateCash(budgetItem);
         }
     };
 
@@ -528,7 +552,7 @@ const App: React.FC = () => {
                                 <IncomesPage
                                     budgetItems={budgetItems}
                                     liabilities={liabilities}
-                                    addBudgetItem={(item) => addOrUpdate(setBudgetItems, item)}
+                                    addBudgetItem={addBudgetItemAndUpdateCash}
                                     updateBudgetItem={updateBudgetItemWithScope}
                                     removeBudgetItem={deleteBudgetItemWithScope}
                                     formatCurrency={formatCurrency}
@@ -538,7 +562,7 @@ const App: React.FC = () => {
                                 <ExpensesPage
                                     budgetItems={budgetItems}
                                     liabilities={liabilities}
-                                    addBudgetItem={(item) => addOrUpdate(setBudgetItems, item)}
+                                    addBudgetItem={addBudgetItemAndUpdateCash}
                                     updateBudgetItem={updateBudgetItemWithScope}
                                     removeBudgetItem={deleteBudgetItemWithScope}
                                     formatCurrency={formatCurrency}
@@ -551,7 +575,7 @@ const App: React.FC = () => {
                                     transactions={transactions}
                                     dividends={dividends}
                                     formatCurrency={formatCurrency}
-                                    addBudgetItem={(item) => addOrUpdate(setBudgetItems, item)}
+                                    addBudgetItem={addBudgetItemAndUpdateCash}
                                     updateBudgetItem={updateBudgetItemWithScope}
                                     removeBudgetItem={deleteBudgetItemWithScope}
                                 />

@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Card from '../components/Card';
 import FIRESimulator from '../components/FIRESimulator';
+import HowItWorksModal from '../components/HowItWorksModal';
 import { FireSettings } from '../types';
+import { InformationCircleIcon } from '@heroicons/react/24/outline';
 
 interface FIREPageProps {
     netWorth: number;
@@ -15,6 +17,7 @@ interface FIREPageProps {
 const FIREPage: React.FC<FIREPageProps> = ({ netWorth, fireData, fireSettings, setFireSettings, setTargetAnnualSpending, formatCurrency }) => {
     const [localSpending, setLocalSpending] = React.useState(fireData.targetAnnualSpending);
     const [isSaved, setIsSaved] = React.useState(false);
+    const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
 
     // Basic FIRE math
     const targetFIREAmount = fireData.targetAnnualSpending / (fireSettings.swr / 100);
@@ -36,16 +39,31 @@ const FIREPage: React.FC<FIREPageProps> = ({ netWorth, fireData, fireSettings, s
 
     return (
         <main className="space-y-6">
-             <header className="mb-4 flex justify-between items-end">
+             <header className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">FIRE Dashboard</h1>
-                    <p className="text-gray-500 dark:text-gray-400">Track your journey to Financial Independence and Early Retirement.</p>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">FIRE Dashboard</h1>
+                        <button 
+                            onClick={() => setIsHowItWorksOpen(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                        >
+                            <InformationCircleIcon className="w-5 h-5" />
+                            How it works
+                        </button>
+                    </div>
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">Track your journey to Financial Independence and Early Retirement.</p>
                 </div>
                 <div className="flex items-center space-x-2 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-2 rounded-xl border border-indigo-100 dark:border-indigo-800">
                     <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400">FI Number:</span>
                     <span className="text-lg font-bold text-indigo-700 dark:text-indigo-300">{formatCurrency(targetFIREAmount)}</span>
                 </div>
             </header>
+
+            <HowItWorksModal 
+                isOpen={isHowItWorksOpen} 
+                onClose={() => setIsHowItWorksOpen(false)} 
+                section="FIRE" 
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Card title="Current Progress">

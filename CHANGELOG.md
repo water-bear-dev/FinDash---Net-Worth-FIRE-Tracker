@@ -11,6 +11,9 @@ All notable changes to the **FinDash** project will be documented in this file.
   - Added historical price fallbacks (5-day window) to ensure data availability on weekends and market holidays.
   - Added `/search` endpoint for real-time ticker and company name lookup.
   - Upgraded `yfinance` to `v1.2.0+` to resolve Yahoo Finance API connection issues.
+- **Automated Net Worth Tracking**:
+  - Automatically updates the total net worth when logging realized income or expenses by directly adjusting the primary cash balance.
+  - Automatically updates the total net worth when making a new asset purchase by deducting the transaction cost from the primary cash balance.
 
 ### Removed
 - **Alpha Vantage Integration**:

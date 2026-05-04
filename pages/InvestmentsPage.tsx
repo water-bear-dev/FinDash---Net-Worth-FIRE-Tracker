@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Investment, TargetAllocation, RebalancingSettings } from '../types';
 import Card from '../components/Card';
 import InvestmentTable from '../components/InvestmentTable';
 import RebalancingEngine from '../components/RebalancingEngine';
+import HowItWorksModal from '../components/HowItWorksModal';
+import { InformationCircleIcon } from '@heroicons/react/24/outline';
 
 interface InvestmentsPageProps {
     holdings: Investment[];
@@ -27,12 +29,31 @@ const InvestmentsPage: React.FC<InvestmentsPageProps> = ({
     monthlySavings,
     formatCurrency
 }) => {
+    const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
+
     return (
         <main className="space-y-6">
-             <header className="mb-4">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Portfolio Holdings</h1>
-                <p className="text-gray-500 dark:text-gray-400">View and manage your investment holdings.</p>
+             <header className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                <div>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Portfolio Holdings</h1>
+                        <button 
+                            onClick={() => setIsHowItWorksOpen(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                        >
+                            <InformationCircleIcon className="w-5 h-5" />
+                            How it works
+                        </button>
+                    </div>
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">View and manage your investment holdings and target allocations.</p>
+                </div>
             </header>
+
+            <HowItWorksModal 
+                isOpen={isHowItWorksOpen} 
+                onClose={() => setIsHowItWorksOpen(false)} 
+                section="INVESTMENTS" 
+            />
 
             <Card title="Current Investments">
                 <div className="flex justify-end mb-4">

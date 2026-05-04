@@ -1,10 +1,12 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import yfinance as yf
 from typing import List, Dict, Any
 import uvicorn
 import time
 import threading
+from collections import defaultdict
 
 app = FastAPI(title="FinDash Price Server")
 
@@ -16,6 +18,29 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiter setup: 60 requests per minute per IP
+request_counts = defaultdict(list)
+RATE_LIMIT_MAX_REQUESTS = 60
+RATE_LIMIT_WINDOW_SECONDS = 60
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    now = time.time()
+    
+    # Filter requests within the last 60 seconds
+    request_counts[client_ip] = [t for t in request_counts[client_ip] if now - t < RATE_LIMIT_WINDOW_SECONDS]
+    
+    if len(request_counts[client_ip]) >= RATE_LIMIT_MAX_REQUESTS:
+        return JSONResponse(
+            status_code=429, 
+            content={"detail": "Too Many Requests. Limit is 60 requests per minute."}
+        )
+        
+    request_counts[client_ip].append(now)
+    response = await call_next(request)
+    return response
 
 # In-memory cache
 # { "TICKER": {"price": float, "timestamp": float} }
