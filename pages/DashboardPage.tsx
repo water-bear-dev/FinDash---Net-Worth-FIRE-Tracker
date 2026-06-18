@@ -1,38 +1,51 @@
-import React from 'react';
-import { HistoricalNetWorth, CashAccount, Investment, Property, AssetCategory } from '../types';
+import React, { useMemo, useState } from 'react';
+import { HistoricalNetWorth, CashAccount, Investment, Property, AssetCategory, FireSettings, SavingsRateHistoryPoint } from '../types';
 import Card from '../components/Card';
 import AllocationDonutChart from '../components/AllocationDonutChart';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Treemap } from 'recharts';
+import { mergeHistoricalAndForecast, projectNetWorth } from '../services/netWorthForecast';
 
 interface DashboardPageProps {
     netWorth: number;
     historicalNetWorth: HistoricalNetWorth[];
     totalAssets: number;
     totalLiabilities: number;
+    totalCash: number;
     fireData: { targetAnnualSpending: number; monthlySavings: number; };
+    fireSettings: FireSettings;
     holdings: Investment[];
     cashAccounts: CashAccount[];
     properties: Property[];
-    budgetSummary: { totalExpenses: number; netMonthlySavings: number };
+    budgetSummary: { totalExpenses: number; totalIncome: number; netMonthlySavings: number };
     monthlyIncome: number;
+    savingsRateHistory: SavingsRateHistoryPoint[];
+    emergencyFundTargetMonths: number;
     refreshPrices: () => void;
     isPricesLoading: boolean;
     formatCurrency: (value: number) => string;
 }
+
+const FORECAST_HORIZONS = [
+    { label: '1 yr', months: 12 },
+    { label: '5 yr', months: 60 },
+    { label: '10 yr', months: 120 },
+];
 
 const DashboardPage: React.FC<DashboardPageProps> = ({
     netWorth,
     historicalNetWorth,
     totalAssets,
     totalLiabilities,
+    totalCash,
     fireData,
+    fireSettings,
     holdings,
     cashAccounts,
     properties,
     budgetSummary,
     monthlyIncome,
-    refreshPrices,
-    isPricesLoading,
+    savingsRateHistory,
+    emergencyFundTargetMonths,
     formatCurrency
 }) => {
 
@@ -56,7 +69,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
     }, [holdings, cashAccounts, properties]);
 
-    // Format data for Treemap
     const treemapData = React.useMemo(() => {
         const children = allocationData.map(item => ({
             name: item.name,
@@ -66,16 +78,21 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     }, [allocationData]);
     
     const savingsRate = monthlyIncome > 0 ? (budgetSummary.netMonthlySavings / monthlyIncome) * 100 : 0;
+    const monthsCovered = budgetSummary.totalExpenses > 0 ? totalCash / budgetSummary.totalExpenses : 0;
+    const emergencyProgress = Math.min(100, (monthsCovered / emergencyFundTargetMonths) * 100);
 
-    // Custom Tooltip for LineChart
-    const CustomLineTooltip = ({ active, payload, label }: any) => {
+    const [forecastMonths, setForecastMonths] = useState(60);
+    const netWorthChartData = useMemo(() => {
+        const forecast = projectNetWorth(netWorth, budgetSummary.netMonthlySavings, fireSettings.expectedReturn, forecastMonths);
+        return mergeHistoricalAndForecast(historicalNetWorth, forecast);
+    }, [netWorth, budgetSummary.netMonthlySavings, fireSettings.expectedReturn, forecastMonths, historicalNetWorth]);
+
+    const SavingsRateTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 shadow-lg rounded-lg">
                     <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">{label}</p>
-                    <p className="font-semibold text-gray-900 dark:text-white">
-                        {formatCurrency(payload[0].value)}
-                    </p>
+                    <p className="font-semibold text-indigo-500">{payload[0].value.toFixed(1)}%</p>
                 </div>
             );
         }
@@ -103,17 +120,34 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                     </Card>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Card title="Budget Summary">
                     <div className="space-y-3">
                         <div>
                             <p className="text-sm text-gray-500 dark:text-gray-400">Monthly Savings Rate</p>
-                            <p className="text-2xl font-semibold text-indigo-500 dark:text-indigo-400">{savingsRate.toFixed(1)}%</p>
+                            <p className="text-2xl font-semibold text-indigo-500 dark:text-indigo-400" data-testid="savings-rate-current">{savingsRate.toFixed(1)}%</p>
                         </div>
                         <div>
                             <p className="text-sm text-gray-500 dark:text-gray-400">Net Monthly Savings</p>
                             <p className="text-2xl font-semibold text-gray-900 dark:text-white">{formatCurrency(budgetSummary.netMonthlySavings)}</p>
                         </div>
+                    </div>
+                </Card>
+                <Card title="Emergency Fund">
+                    <div className="space-y-3" data-testid="emergency-fund-card">
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Months of expenses covered</p>
+                            <p className="text-2xl font-semibold text-gray-900 dark:text-white">{monthsCovered.toFixed(1)} / {emergencyFundTargetMonths}</p>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                            <div
+                                className={`h-2.5 rounded-full ${emergencyProgress >= 100 ? 'bg-green-500' : 'bg-indigo-500'}`}
+                                style={{ width: `${emergencyProgress}%` }}
+                            />
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Based on {formatCurrency(totalCash)} liquid cash and {formatCurrency(budgetSummary.totalExpenses)} monthly expenses.
+                        </p>
                     </div>
                 </Card>
                 <Card title="FIRE Journey">
@@ -131,16 +165,44 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 </Card>
             </div>
 
+            {savingsRateHistory.length > 0 && (
+                <Card title="Savings Rate Trend">
+                    <div className="h-56 mt-2" data-testid="savings-rate-trend-chart">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={savingsRateHistory}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} vertical={false} />
+                                <XAxis dataKey="month" stroke="#6B7280" fontSize={12} tickLine={false} axisLine={false} />
+                                <YAxis stroke="#6B7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} />
+                                <RechartsTooltip content={<SavingsRateTooltip />} />
+                                <Line type="monotone" dataKey="savingsRate" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                </Card>
+            )}
+
              <Card title="Asset Allocation">
                 <AllocationDonutChart data={allocationData} formatCurrency={formatCurrency} />
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card title="Historical Net Worth">
-                    {historicalNetWorth.length > 0 ? (
-                        <div className="h-64 mt-4">
+                <Card title="Historical Net Worth & Forecast">
+                    <div className="flex gap-2 mb-3">
+                        {FORECAST_HORIZONS.map(h => (
+                            <button
+                                key={h.months}
+                                type="button"
+                                onClick={() => setForecastMonths(h.months)}
+                                className={`px-3 py-1 text-xs rounded-lg border ${forecastMonths === h.months ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300'}`}
+                            >
+                                {h.label}
+                            </button>
+                        ))}
+                    </div>
+                    {netWorthChartData.length > 0 ? (
+                        <div className="h-64 mt-2" data-testid="net-worth-forecast-chart">
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={historicalNetWorth}>
+                                <LineChart data={netWorthChartData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} vertical={false} />
                                     <XAxis 
                                         dataKey="date" 
@@ -156,14 +218,35 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                                         axisLine={false} 
                                         tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} 
                                     />
-                                    <RechartsTooltip content={<CustomLineTooltip />} />
+                                    <RechartsTooltip content={({ active, payload, label }: any) => {
+                                        if (!active || !payload?.length) return null;
+                                        const actual = payload.find((p: any) => p.dataKey === 'actualNetWorth' && p.value != null);
+                                        const forecast = payload.find((p: any) => p.dataKey === 'forecastNetWorth' && p.value != null);
+                                        const value = actual?.value ?? forecast?.value;
+                                        return (
+                                            <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 shadow-lg rounded-lg">
+                                                <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">{label}{forecast && !actual ? ' (forecast)' : ''}</p>
+                                                <p className="font-semibold text-gray-900 dark:text-white">{formatCurrency(value)}</p>
+                                            </div>
+                                        );
+                                    }} />
                                     <Line 
                                         type="monotone" 
-                                        dataKey="netWorth" 
+                                        dataKey="actualNetWorth" 
                                         stroke="#6366f1" 
                                         strokeWidth={3} 
                                         dot={{ r: 4, strokeWidth: 2 }} 
                                         activeDot={{ r: 6, strokeWidth: 0 }} 
+                                        connectNulls={false}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="forecastNetWorth"
+                                        stroke="#818cf8"
+                                        strokeWidth={2}
+                                        strokeDasharray="6 4"
+                                        dot={false}
+                                        connectNulls={false}
                                     />
                                 </LineChart>
                             </ResponsiveContainer>

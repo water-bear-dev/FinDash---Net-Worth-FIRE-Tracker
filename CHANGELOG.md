@@ -5,6 +5,22 @@ All notable changes to the **FinDash** project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Phase 1 Features**:
+  - **Savings rate trend**: 12-month savings rate chart on the Dashboard alongside the existing monthly rate metric.
+  - **Debt payoff planner**: Snowball vs avalanche comparison on Manage Data, with payments inferred from linked recurring expenses.
+  - **Net worth forecast**: Dashed forward projection on the Historical Net Worth chart with 1/5/10-year horizons.
+  - **Emergency fund tracker**: Dashboard progress card showing months of expenses covered vs a configurable target in Settings.
+  - **Encrypted backups**: Optional passphrase encryption (AES-GCM + PBKDF2) for full JSON export/import.
+  - **Receipt / invoice attachments**: Upload or camera-capture files on budget items; stored in IndexedDB and included in full backups.
+  - Added E2E coverage in `tests/e2e/test_phase1_features.py` (41 tests total across the suite).
+- **Comprehensive E2E Test Suite (Playwright + pytest)**:
+  - Migrated from a single ad-hoc Playwright script to a `pytest`-based suite with **35 passing tests** covering every major feature (setup wizard, dashboard, manage data, ledger/transactions, budgeting, calendar, FIRE simulator, investments/rebalancing, settings, and data portability).
+  - Added shared fixtures (`tests/e2e/conftest.py`): `seed` seeds `localStorage` via `add_init_script` to skip the SetupWizard and start from a deterministic state; `mocks` intercepts the local price server (`localhost:8001/prices`) and the Gemini API so tests run fully offline.
+  - Added page-object style helpers (`tests/e2e/helpers.py`): `open_app`, `goto` (sidebar nav), `card`, `today_iso`, `months_ago_iso`.
+  - Added tooling: `tests/requirements-dev.txt` (pytest, pytest-playwright, pytest-html) and `pytest.ini` with HTML + JUnit reporting and failure artifacts (screenshots/video/trace).
+  - Reports are written to `reports/` and `test-results/` (git-ignored).
+  - Updated `TECHNICAL_TESTING.md` with install steps, run commands, and an explanation of fixtures/seeding/mocking.
+  - No application source code was modified; tests rely on existing accessible/text/placeholder selectors.
 - **Price Server Hardening**:
   - Migrated price server to port `8001` to prevent conflicts with other financial projects.
   - Implemented thread-safe batch processing with `yfinance` for significantly faster portfolio refreshes.

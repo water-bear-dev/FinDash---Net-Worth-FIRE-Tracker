@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# E2E test artifacts (Playwright + pytest)
+reports/
+test-results/
+.pytest_cache/

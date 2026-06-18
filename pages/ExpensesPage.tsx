@@ -78,7 +78,7 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
 
     const handleSave = (item: Omit<BudgetItem, 'id'> | BudgetItem, scope?: 'one' | 'future', occurrenceDate?: string) => {
         const itemToSave = { ...item, type: 'expense' as const };
-        if ('id' in itemToSave && itemToSave.id) {
+        if (editingItem?.id && 'id' in itemToSave && itemToSave.id) {
             updateBudgetItem(itemToSave, scope, occurrenceDate);
         } else {
             addBudgetItem(itemToSave);
@@ -143,16 +143,23 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
                                 <th className="px-4 py-2">Name</th>
                                 <th className="px-4 py-2">Category</th>
                                 <th className="px-4 py-2 text-right">Amount</th>
+                                <th className="px-4 py-2 text-center">Files</th>
                                 <th className="px-4 py-2 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                            {monthlyExpenseEvents.map(item => (
+                            {monthlyExpenseEvents.map(item => {
+                                const sourceItem = budgetItems.find(i => i.id === (item.originalId || item.id));
+                                const attachmentCount = sourceItem?.attachmentIds?.length || 0;
+                                return (
                                 <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <td className="px-4 py-2">{moment(item.date).format('MMM D')}</td>
                                     <td className="px-4 py-2 font-medium">{item.name}</td>
                                     <td className="px-4 py-2">{item.category}</td>
                                     <td className="px-4 py-2 text-right font-semibold text-red-400">{formatCurrency(item.amount)}</td>
+                                    <td className="px-4 py-2 text-center text-gray-500" data-testid="expense-attachment-count">
+                                        {attachmentCount > 0 ? `📎 ${attachmentCount}` : '—'}
+                                    </td>
                                     <td className="px-4 py-2 text-center">
                                         <div className="flex justify-center items-center space-x-2">
                                             <button onClick={() => openEditModal(item)} className={`${btnSecondaryClasses} w-auto text-xs py-1 px-2`}>Edit</button>
@@ -160,7 +167,7 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                            )})}
                         </tbody>
                     </table>
                     {monthlyExpenseEvents.length === 0 && (

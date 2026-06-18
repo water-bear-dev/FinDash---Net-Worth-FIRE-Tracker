@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { UserProfile, Transaction, BudgetItem } from '../types';
 import Card from '../components/Card';
 import { exportTransactionsToJSON, exportBudgetToJSON } from '../services/exportService';
+import { gatherBackupData, restoreBackupData } from '../services/backupService';
+import { encryptJSON, decryptJSON, isEncryptedBackup } from '../services/cryptoService';
+import { serializeAllAttachments, restoreAttachments } from '../services/attachmentService';
 import { getDirectoryHandle, saveDirectoryHandle, syncDataToDirectory, verifyPermission } from '../services/syncService';
 import moment from 'moment';
 
@@ -14,6 +17,8 @@ interface SettingsPageProps {
     saveIsChatbotEnabled: (enabled: boolean) => void;
     targetAnnualSpending: number;
     saveTargetAnnualSpending: (value: number) => void;
+    emergencyFundTargetMonths: number;
+    saveEmergencyFundTargetMonths: (value: number) => void;
     currency: string;
     saveCurrency: (currency: string) => void;
     useLocalPriceServer: boolean;
@@ -36,6 +41,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     saveIsChatbotEnabled,
     targetAnnualSpending,
     saveTargetAnnualSpending,
+    emergencyFundTargetMonths,
+    saveEmergencyFundTargetMonths,
     currency,
     saveCurrency,
     useLocalPriceServer,
@@ -47,6 +54,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     const [geminiKey, setGeminiKey] = useState(geminiApiKey);
     const [chatbotEnabled, setChatbotEnabled] = useState(isChatbotEnabled);
     const [currentCurrency, setCurrentCurrency] = useState(currency);
+    const [emergencyMonths, setEmergencyMonths] = useState(emergencyFundTargetMonths);
+    const [encryptBackup, setEncryptBackup] = useState(false);
+    const [backupPassphrase, setBackupPassphrase] = useState('');
+    const [importPassphrase, setImportPassphrase] = useState('');
+    const [importError, setImportError] = useState<string | null>(null);
     const [syncDirName, setSyncDirName] = useState<string | null>(null);
     const [isSyncing, setIsSyncing] = useState(false);
     const [lastSyncTime, setLastSyncTime] = useState<string | null>(window.localStorage.getItem('lastSyncTime'));
@@ -60,6 +72,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     useEffect(() => { setGeminiKey(geminiApiKey); }, [geminiApiKey]);
     useEffect(() => { setChatbotEnabled(isChatbotEnabled); }, [isChatbotEnabled]);
     useEffect(() => { setCurrentCurrency(currency); }, [currency]);
+    useEffect(() => { setEmergencyMonths(emergencyFundTargetMonths); }, [emergencyFundTargetMonths]);
     useEffect(() => { setLocalPriceServerEnabled(useLocalPriceServer); }, [useLocalPriceServer]);
 
     useEffect(() => {
@@ -96,19 +109,31 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         saveCurrency(newCurrency);
     }
     
-    const handleExport = () => {
-        const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'geminiApiKey', 'isChatbotEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
-        const exportData: Record<string, any> = {};
-        keysToExport.forEach(key => {
-            const item = window.localStorage.getItem(key);
-            if (item) {
-                try { exportData[key] = JSON.parse(item); } catch (e) { exportData[key] = item; }
+    const handleExport = async () => {
+        const exportData = gatherBackupData();
+        try {
+            exportData.attachments = await serializeAllAttachments();
+        } catch (err) {
+            console.error('Failed to serialize attachments', err);
+        }
+
+        let payload = JSON.stringify(exportData, null, 2);
+        let filename = 'findash-backup.json';
+
+        if (encryptBackup) {
+            if (!backupPassphrase.trim()) {
+                alert('Enter a passphrase to encrypt your backup.');
+                return;
             }
-        });
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+            const envelope = await encryptJSON(payload, backupPassphrase);
+            payload = JSON.stringify(envelope, null, 2);
+            filename = 'findash-backup.enc.json';
+        }
+
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(payload);
         const downloadAnchorNode = document.createElement('a');
         downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", "findash-backup.json");
+        downloadAnchorNode.setAttribute("download", filename);
         document.body.appendChild(downloadAnchorNode);
         downloadAnchorNode.click();
         downloadAnchorNode.remove();
@@ -120,11 +145,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                const importedData = JSON.parse(event.target?.result as string);
-                if (typeof importedData !== 'object' || importedData === null) {
+                const parsed = JSON.parse(event.target?.result as string);
+                if (typeof parsed !== 'object' || parsed === null) {
                     throw new Error("Invalid backup file format");
                 }
-                setImportConfirmModal({ isOpen: true, data: importedData });
+                setImportError(null);
+                setImportPassphrase('');
+                setImportConfirmModal({ isOpen: true, data: parsed });
             } catch (error) {
                 console.error("Error importing data: ", error);
                 alert("Failed to import data. Please ensure the file is a valid FinDash backup JSON.");
@@ -134,12 +161,28 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         reader.readAsText(file);
     };
 
-    const confirmImport = () => {
-        if (importConfirmModal.data) {
-            Object.keys(importConfirmModal.data).forEach(key => {
-                window.localStorage.setItem(key, JSON.stringify(importConfirmModal.data[key]));
-            });
+    const confirmImport = async () => {
+        if (!importConfirmModal.data) return;
+
+        try {
+            let data = importConfirmModal.data;
+            if (isEncryptedBackup(data)) {
+                if (!importPassphrase.trim()) {
+                    setImportError('Passphrase is required for encrypted backups.');
+                    return;
+                }
+                const decrypted = await decryptJSON(data, importPassphrase);
+                data = JSON.parse(decrypted);
+            }
+
+            const attachments = data.attachments;
+            restoreBackupData(data);
+            if (Array.isArray(attachments)) {
+                await restoreAttachments(attachments);
+            }
             window.location.reload();
+        } catch (error) {
+            setImportError(error instanceof Error ? error.message : 'Import failed.');
         }
     };
 
@@ -168,7 +211,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         try {
             const handle = await getDirectoryHandle();
             if (!handle) { setIsSyncing(false); return; }
-            const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'avApiKey', 'isAvEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
+            const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'geminiApiKey', 'isChatbotEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings', 'rebalancingSettings', 'historicalNetWorth', 'emergencyFundTargetMonths', 'useLocalPriceServer', 'isSetupComplete'];
             const exportData: Record<string, any> = {};
             keysToExport.forEach(key => {
                 const item = window.localStorage.getItem(key);
@@ -228,7 +271,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             </Card>
 
             <Card title="Regional Settings">
-                <form>
+                <form className="space-y-4">
                     <div>
                         <label htmlFor="currency" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Currency <span className="text-red-500">*</span></label>
                         <select id="currency" name="currency" value={currentCurrency} onChange={handleCurrencyChange} className={inputClasses}>
@@ -241,6 +284,23 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             <option value="CHF">CHF - Swiss Franc</option>
                             <option value="CNY">CNY - Chinese Yuan</option>
                         </select>
+                    </div>
+                    <div>
+                        <label htmlFor="emergencyFundTargetMonths" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Emergency fund target (months of expenses)</label>
+                        <input
+                            id="emergencyFundTargetMonths"
+                            type="number"
+                            min={1}
+                            max={24}
+                            value={emergencyMonths}
+                            onChange={(e) => {
+                                const value = parseInt(e.target.value, 10) || 6;
+                                setEmergencyMonths(value);
+                                saveEmergencyFundTargetMonths(value);
+                            }}
+                            className={inputClasses}
+                            data-testid="emergency-fund-target-months"
+                        />
                     </div>
                 </form>
             </Card>
@@ -287,13 +347,30 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                     </div>
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                         <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Full Backup</h4>
+                        <div className="space-y-3 mb-4">
+                            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                <input type="checkbox" checked={encryptBackup} onChange={(e) => setEncryptBackup(e.target.checked)} data-testid="encrypt-backup-toggle" />
+                                Encrypt backup with passphrase
+                            </label>
+                            {encryptBackup && (
+                                <input
+                                    type="password"
+                                    placeholder="Backup passphrase"
+                                    value={backupPassphrase}
+                                    onChange={(e) => setBackupPassphrase(e.target.value)}
+                                    className={inputClasses}
+                                    data-testid="backup-passphrase"
+                                />
+                            )}
+                        </div>
                         <div className="flex flex-col sm:flex-row gap-4">
-                            <button type="button" onClick={handleExport} className={btnSecondaryClasses}>Export Full Backup</button>
+                            <button type="button" onClick={handleExport} className={btnSecondaryClasses} data-testid="export-full-backup">Export Full Backup</button>
                             <div className="relative">
-                                <input type="file" accept=".json" onChange={handleImport} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                <input type="file" accept=".json" onChange={handleImport} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" data-testid="import-backup-input" />
                                 <button type="button" className={btnSecondaryClasses}>Import Backup</button>
                             </div>
                         </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Encrypted backups use AES-GCM. Attachments are included in full backups.</p>
                     </div>
                 </div>
             </Card>
@@ -378,6 +455,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white">Confirm Data Import</h3>
                             <p className="text-gray-500 dark:text-gray-400 text-sm">This will overwrite everything and reload the application.</p>
+                            {isEncryptedBackup(importConfirmModal.data) && (
+                                <input
+                                    type="password"
+                                    placeholder="Enter backup passphrase"
+                                    value={importPassphrase}
+                                    onChange={(e) => setImportPassphrase(e.target.value)}
+                                    className={inputClasses}
+                                    data-testid="import-passphrase"
+                                />
+                            )}
+                            {importError && <p className="text-sm text-red-500">{importError}</p>}
                             <div className="flex gap-3 pt-4">
                                 <button onClick={() => setImportConfirmModal({ isOpen: false, data: null })} className={`${btnSecondaryClasses} flex-1`}>Cancel</button>
                                 <button onClick={confirmImport} className="flex-1 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5">Overwrite & Reload</button>

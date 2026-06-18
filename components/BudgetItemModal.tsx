@@ -1,6 +1,14 @@
-import React, { useState, ChangeEvent } from 'react';
-import { BudgetItem, Liability } from '../types';
+import React, { useState, ChangeEvent, useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import { BudgetAttachment, BudgetItem, Liability } from '../types';
 import { expenseCategories, incomeCategories } from '../data/categories';
+import {
+    addAttachment,
+    createAttachmentPreviewUrl,
+    deleteAttachment,
+    listAttachments,
+    validateAttachmentFile,
+} from '../services/attachmentService';
 
 interface BudgetItemModalProps {
     item: BudgetItem | null;
@@ -50,8 +58,36 @@ const BudgetItemModal: React.FC<BudgetItemModalProps> = ({ item, onSave, onClose
     // Check if initial category is one of the "Other" variants
     const initialIsOther = formData.category === 'Other' || formData.category === 'Other (input them here)';
     const [customCategory, setCustomCategory] = useState(initialIsOther ? formData.category : '');
+    const [existingAttachments, setExistingAttachments] = useState<BudgetAttachment[]>([]);
+    const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+    const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>([]);
+    const [attachmentError, setAttachmentError] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (item?.attachmentIds?.length) {
+            listAttachments(item.attachmentIds).then(setExistingAttachments).catch(console.error);
+        } else {
+            setExistingAttachments([]);
+        }
+    }, [item?.id, item?.attachmentIds?.join(',')]);
 
     const isOtherCategory = formData.category === 'Other' || formData.category === 'Other (input them here)';
+
+    const handleAttachmentFiles = (files: FileList | null) => {
+        if (!files?.length) return;
+        const next: File[] = [];
+        for (const file of Array.from(files)) {
+            const error = validateAttachmentFile(file);
+            if (error) {
+                setAttachmentError(error);
+                return;
+            }
+            next.push(file);
+        }
+        setAttachmentError(null);
+        setPendingFiles(prev => [...prev, ...next]);
+    };
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type: inputType } = e.target;
@@ -103,18 +139,45 @@ const BudgetItemModal: React.FC<BudgetItemModalProps> = ({ item, onSave, onClose
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validate()) return;
 
-        const finalCategory = isOtherCategory ? customCategory : formData.category;
-        const dataToSave = { 
-            ...formData, 
-            category: finalCategory,
-            id: (item && item.id) ? item.id : undefined 
-        } as BudgetItem;
-        
-        onSave(dataToSave, item && item.isRecurring ? updateScope : undefined, occurrenceDate);
+        setIsSaving(true);
+        try {
+            const finalCategory = isOtherCategory ? customCategory : formData.category;
+            const budgetItemId = (item && item.id) ? item.id : uuidv4();
+
+            await Promise.all(removedAttachmentIds.map(deleteAttachment));
+
+            const keptIds = existingAttachments
+                .filter(a => !removedAttachmentIds.includes(a.id))
+                .map(a => a.id);
+
+            const newAttachmentIds: string[] = [];
+            for (const file of pendingFiles) {
+                const saved = await addAttachment(file, {
+                    id: budgetItemId,
+                    name: formData.name,
+                    date: formData.date,
+                    type: formData.type,
+                });
+                newAttachmentIds.push(saved.id);
+            }
+
+            const dataToSave = {
+                ...formData,
+                category: finalCategory,
+                id: budgetItemId,
+                attachmentIds: [...keptIds, ...newAttachmentIds],
+            } as BudgetItem;
+
+            onSave(dataToSave, item && item.isRecurring ? updateScope : undefined, occurrenceDate);
+        } catch (error) {
+            setAttachmentError(error instanceof Error ? error.message : 'Failed to save attachments.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleDelete = () => {
@@ -223,6 +286,86 @@ const BudgetItemModal: React.FC<BudgetItemModalProps> = ({ item, onSave, onClose
                         </div>
                     </div>
 
+                    <div>
+                        <label className={labelClasses}>{formData.type === 'income' ? 'Invoices' : 'Receipts'}</label>
+                        <div className="space-y-3 p-4 border border-gray-200 dark:border-gray-700 rounded-xl" data-testid="attachment-section">
+                            <div className="flex flex-wrap gap-2">
+                                <label className={`${btnSecondaryClasses} cursor-pointer`}>
+                                    Upload file
+                                    <input
+                                        type="file"
+                                        accept="image/*,application/pdf"
+                                        className="hidden"
+                                        multiple
+                                        onChange={(e) => handleAttachmentFiles(e.target.files)}
+                                        data-testid="attachment-upload-input"
+                                    />
+                                </label>
+                                <label className={`${btnSecondaryClasses} cursor-pointer`}>
+                                    Take photo
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        capture="environment"
+                                        className="hidden"
+                                        onChange={(e) => handleAttachmentFiles(e.target.files)}
+                                        data-testid="attachment-camera-input"
+                                    />
+                                </label>
+                            </div>
+                            {attachmentError && <p className="text-sm text-red-500">{attachmentError}</p>}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {existingAttachments
+                                    .filter(a => !removedAttachmentIds.includes(a.id))
+                                    .map(attachment => (
+                                        <div key={attachment.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-2">
+                                            {attachment.mimeType.startsWith('image/') ? (
+                                                <img
+                                                    src={createAttachmentPreviewUrl(attachment)}
+                                                    alt={attachment.name}
+                                                    className="w-full h-24 object-cover rounded"
+                                                />
+                                            ) : (
+                                                <div className="h-24 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded text-xs">PDF</div>
+                                            )}
+                                            <p className="text-[10px] mt-1 truncate" title={attachment.originalName}>{attachment.name}</p>
+                                            <div className="flex gap-2 mt-2">
+                                                <a
+                                                    href={createAttachmentPreviewUrl(attachment)}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-xs text-indigo-600 dark:text-indigo-400"
+                                                >
+                                                    Open
+                                                </a>
+                                                <button
+                                                    type="button"
+                                                    className="text-xs text-red-500"
+                                                    onClick={() => setRemovedAttachmentIds(prev => [...prev, attachment.id])}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                {pendingFiles.map((file, index) => (
+                                    <div key={`${file.name}-${index}`} className="border border-dashed border-indigo-300 rounded-lg p-2">
+                                        <div className="h-24 flex items-center justify-center bg-indigo-50 dark:bg-indigo-900/20 rounded text-xs text-center px-2">
+                                            {file.name}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="text-xs text-red-500 mt-2"
+                                            onClick={() => setPendingFiles(prev => prev.filter((_, i) => i !== index))}
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Recurring Switch */}
                     <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700">
                         <div>
@@ -319,7 +462,7 @@ const BudgetItemModal: React.FC<BudgetItemModalProps> = ({ item, onSave, onClose
                         </div>
                         <div className="flex space-x-3">
                             <button type="button" onClick={onClose} className={btnSecondaryClasses}>Cancel</button>
-                            <button type="submit" className={btnPrimaryClasses}>Save Changes</button>
+                            <button type="submit" className={btnPrimaryClasses} disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Changes'}</button>
                         </div>
                     </div>
                 </form>

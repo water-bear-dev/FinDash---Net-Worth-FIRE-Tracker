@@ -19,6 +19,8 @@ import {
 } from './types';
 import moment from 'moment';
 import { generateRecurringEvents } from './services/eventGenerator';
+import { computeSavingsRateHistory } from './services/savingsRateHistory';
+import { deleteAttachmentsForBudgetItem } from './services/attachmentService';
 import { v4 as uuidv4 } from 'uuid';
 
 // --- SAMPLE DATA ---
@@ -144,6 +146,7 @@ const App: React.FC = () => {
         expectedReturn: 7.0
     });
     const [historicalNetWorth, setHistoricalNetWorth] = useLocalStorage<HistoricalNetWorth[]>('historicalNetWorth', []);
+    const [emergencyFundTargetMonths, setEmergencyFundTargetMonths] = useLocalStorage<number>('emergencyFundTargetMonths', 6);
     const [isSetupComplete, setIsSetupComplete] = useLocalStorage<boolean>('isSetupComplete', false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isPricesLoading, setIsPricesLoading] = useState(false);
@@ -175,7 +178,7 @@ const App: React.FC = () => {
                 if (!handle) return;
 
                 // Gather full backup JSON
-                const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'geminiApiKey', 'isChatbotEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings'];
+                const keysToExport = ['cashAccounts', 'properties', 'liabilities', 'transactions', 'dividends', 'budgetItems', 'userProfile', 'geminiApiKey', 'isChatbotEnabled', 'targetAnnualSpending', 'currency', 'theme', 'targetAllocations', 'fireSettings', 'rebalancingSettings', 'historicalNetWorth', 'emergencyFundTargetMonths', 'useLocalPriceServer', 'isSetupComplete'];
                 const exportData: Record<string, any> = {};
                 keysToExport.forEach(key => {
                     const item = window.localStorage.getItem(key);
@@ -296,7 +299,11 @@ const App: React.FC = () => {
     const addOrUpdate = <T extends { id?: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>, item: Omit<T, 'id'> | T) => {
         setter(prev => {
             if ('id' in item && item.id) {
-                return prev.map(i => i.id === item.id ? item as T : i);
+                const exists = prev.some(i => i.id === item.id);
+                if (exists) {
+                    return prev.map(i => i.id === item.id ? item as T : i);
+                }
+                return [...prev, item as T];
             }
             const newItem = { ...item, id: uuidv4() } as T;
             return [...prev, newItem];
@@ -365,8 +372,11 @@ const App: React.FC = () => {
         }
     };
     
-    const deleteBudgetItemWithScope = (item: BudgetItem, scope?: 'one' | 'future', occurrenceDate?: string) => {
+    const deleteBudgetItemWithScope = async (item: BudgetItem, scope?: 'one' | 'future', occurrenceDate?: string) => {
         if (!item.isRecurring || !scope || !occurrenceDate) {
+            if (item.attachmentIds?.length) {
+                await deleteAttachmentsForBudgetItem(item.id, item.attachmentIds);
+            }
             remove(setBudgetItems, item.id);
             return;
         }
@@ -463,8 +473,13 @@ const App: React.FC = () => {
         const monthlyEvents = generateRecurringEvents(budgetItems, liabilities, start, end);
         const totalIncome = monthlyEvents.filter(e => e.type === 'income').reduce((acc, item) => acc + item.amount, 0);
         const totalExpenses = monthlyEvents.filter(e => e.type === 'expense').reduce((acc, item) => acc + item.amount, 0);
-        return { totalExpenses, netMonthlySavings: totalIncome - totalExpenses };
+        return { totalExpenses, totalIncome, netMonthlySavings: totalIncome - totalExpenses };
     }, [budgetItems, liabilities]);
+
+    const savingsRateHistory = useMemo(
+        () => computeSavingsRateHistory(budgetItems, liabilities, 12),
+        [budgetItems, liabilities]
+    );
     
     const monthlyIncome = useMemo(() => {
         const start = moment().startOf('month').toDate();
@@ -508,12 +523,16 @@ const App: React.FC = () => {
                                     historicalNetWorth={historicalNetWorth}
                                     totalAssets={totalAssets}
                                     totalLiabilities={totalLiabilities}
+                                    totalCash={totalCash}
                                     fireData={{ targetAnnualSpending, monthlySavings: budgetSummary.netMonthlySavings }}
+                                    fireSettings={fireSettings}
                                     holdings={investments}
                                     cashAccounts={cashAccounts}
                                     properties={properties}
                                     budgetSummary={budgetSummary}
                                     monthlyIncome={monthlyIncome}
+                                    savingsRateHistory={savingsRateHistory}
+                                    emergencyFundTargetMonths={emergencyFundTargetMonths}
                                     refreshPrices={refreshPrices}
                                     isPricesLoading={isPricesLoading}
                                     formatCurrency={formatCurrency}
@@ -524,6 +543,7 @@ const App: React.FC = () => {
                                     cashAccounts={cashAccounts}
                                     properties={properties}
                                     liabilities={liabilities}
+                                    budgetItems={budgetItems}
                                     addCashAccount={(item) => addOrUpdate(setCashAccounts, item)}
                                     addProperty={(item) => addOrUpdate(setProperties, {...item, category: AssetCategory.Property})}
                                     addLiability={(item) => addOrUpdate(setLiabilities, item)}
@@ -613,6 +633,8 @@ const App: React.FC = () => {
                                     saveIsChatbotEnabled={setIsChatbotEnabled}
                                     targetAnnualSpending={targetAnnualSpending}
                                     saveTargetAnnualSpending={setTargetAnnualSpending}
+                                    emergencyFundTargetMonths={emergencyFundTargetMonths}
+                                    saveEmergencyFundTargetMonths={setEmergencyFundTargetMonths}
                                     currency={currency}
                                     saveCurrency={setCurrency}
                                     useLocalPriceServer={useLocalPriceServer}

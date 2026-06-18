@@ -1,62 +1,55 @@
-from playwright.sync_api import sync_playwright
-import sys
-import os
+"""E2E tests for the Dashboard, driven by seeded localStorage state."""
 
-def test_dashboard_and_add_account():
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        
-        # Navigate to the app
-        print("Navigating to http://localhost:3000...")
-        page.goto('http://localhost:3000')
-        page.wait_for_load_state('networkidle')
-        
-        # Check Dashboard title
-        print("Checking Dashboard title...")
-        header = page.locator('h1:has-text("Dashboard")')
-        if header.is_visible():
-            print("Dashboard loaded successfully.")
-        else:
-            print("Dashboard failed to load.")
-            browser.close()
-            sys.exit(1)
-            
-        # Navigate to Manage Data
-        print("Navigating to Manage Data...")
-        page.click('text="Manage Data"')
-        page.wait_for_selector('h1:has-text("Manage Data")')
-        
-        # Add a new Cash Account
-        print("Adding a new cash account...")
-        page.fill('[placeholder="Account Name"]', 'Test Savings Account')
-        page.fill('[placeholder="Balance"]', '10000')
-        page.click('text="Add Account"')
-        
-        # Verify it appears in the table
-        print("Verifying new account in table...")
-        if page.locator('td:has-text("Test Savings Account")').is_visible():
-            print("Account added successfully.")
-        else:
-            print("Failed to add account.")
-            browser.close()
-            sys.exit(1)
-            
-        # Navigate back to Dashboard
-        print("Navigating back to Dashboard...")
-        page.click('text="Dashboard"')
-        page.wait_for_selector('h1:has-text("Dashboard")')
-        
-        # Verify the new account is reflected in the net worth or account list if visible
-        # (Assuming the dashboard shows a list of cash accounts)
-        print("Checking if account is on Dashboard...")
-        if page.locator('text="Test Savings Account"').is_visible():
-            print("Account visible on Dashboard.")
-        else:
-            print("Account not visible on Dashboard (might be expected depending on UI).")
-            
-        print("Test passed!")
-        browser.close()
+from playwright.sync_api import expect
 
-if __name__ == "__main__":
-    test_dashboard_and_add_account()
+from helpers import open_app
+
+
+def test_dashboard_loads(seed, page):
+    seed()
+    open_app(page)
+    expect(page.get_by_role("heading", name="Dashboard", level=1)).to_be_visible()
+    expect(page.get_by_text("A high-level overview of your financial status.")).to_be_visible()
+
+
+def test_net_worth_aggregates_assets_and_liabilities(seed, page):
+    seed(
+        {
+            "cashAccounts": [{"id": "c1", "name": "Checking", "balance": 25000}],
+            "properties": [
+                {"id": "p1", "name": "Home", "currentValue": 100000, "category": "Property"}
+            ],
+            "liabilities": [
+                {"id": "l1", "name": "Loan", "outstandingBalance": 50000, "interestRate": 5}
+            ],
+        }
+    )
+    open_app(page)
+
+    # Assets = 25,000 + 100,000 = 125,000; Net worth = 125,000 - 50,000 = 75,000
+    expect(page.get_by_text("$75,000.00").first).to_be_visible()
+    expect(page.get_by_text("$125,000.00").first).to_be_visible()
+    expect(page.get_by_text("$50,000.00").first).to_be_visible()
+
+
+def test_dashboard_shows_holdings_with_mocked_prices(seed, page):
+    seed(
+        {
+            "cashAccounts": [],
+            "transactions": [
+                {
+                    "id": "t1",
+                    "ticker": "VOO",
+                    "category": "ETF",
+                    "type": "buy",
+                    "date": "2023-01-01",
+                    "quantity": 10,
+                    "pricePerUnit": 300,
+                }
+            ],
+        }
+    )
+    open_app(page)
+
+    # 10 shares * mocked $400 = $4,000 net worth once prices load.
+    expect(page.get_by_text("$4,000.00").first).to_be_visible()

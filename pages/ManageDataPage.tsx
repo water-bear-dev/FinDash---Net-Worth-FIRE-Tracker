@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { CashAccount, Property, Liability, AssetCategory } from '../types';
+import { CashAccount, Property, Liability, AssetCategory, BudgetItem } from '../types';
 import Card from '../components/Card';
 import ConfirmationModal from '../components/ConfirmationModal';
+import DebtPayoffPlanner from '../components/DebtPayoffPlanner';
 
 type Item = CashAccount | Property | Liability;
 type ItemType = 'cash' | 'property' | 'liability';
@@ -10,6 +11,7 @@ interface ManageDataPageProps {
     cashAccounts: CashAccount[];
     properties: Property[];
     liabilities: Liability[];
+    budgetItems: BudgetItem[];
     addCashAccount: (account: Omit<CashAccount, 'id'>) => void;
     addProperty: (property: Omit<Property, 'id' | 'category'>) => void;
     addLiability: (liability: Omit<Liability, 'id'>) => void;
@@ -141,7 +143,7 @@ const ManageDataPage: React.FC<ManageDataPageProps> = (props) => {
             }
         };
 
-        return (<table className="w-full text-left table-auto"><thead className="text-xs text-gray-400 uppercase bg-gray-50 dark:bg-gray-700/50">{renderHead()}</thead><tbody className="divide-y divide-gray-200 dark:divide-gray-700">{renderBody()}</tbody></table>);
+        return (<table className="w-full text-left table-auto" data-testid="manage-data-table"><thead className="text-xs text-gray-400 uppercase bg-gray-50 dark:bg-gray-700/50">{renderHead()}</thead><tbody className="divide-y divide-gray-200 dark:divide-gray-700">{renderBody()}</tbody></table>);
     };
 
     const commonActions = (item: Item, type: ItemType, removeFn: (id: string) => void) => (
@@ -183,6 +185,8 @@ const ManageDataPage: React.FC<ManageDataPageProps> = (props) => {
                     <div><h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Existing Entries</h3><div className="overflow-x-auto">{renderTable()}</div></div>
                 </div>
             </Card>
+
+            <DebtPayoffPlanner liabilities={props.liabilities} budgetItems={props.budgetItems} formatCurrency={formatCurrency} />
 
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50" onClick={handleModalClose}>

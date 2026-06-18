@@ -81,6 +81,47 @@ export interface BudgetItem {
     recurringSettings?: RecurringSettings;
     originalId?: string;
     description?: string;
+    attachmentIds?: string[];
+}
+
+export interface BudgetAttachment {
+    id: string;
+    budgetItemId: string;
+    name: string;
+    originalName: string;
+    mimeType: string;
+    size: number;
+    createdAt: string;
+    blob: Blob;
+}
+
+export interface SavingsRateHistoryPoint {
+    month: string;
+    savingsRate: number;
+    netSavings: number;
+    totalIncome: number;
+    totalExpenses: number;
+}
+
+export interface NetWorthForecastPoint {
+    date: string;
+    netWorth: number;
+    isForecast: boolean;
+}
+
+export interface DebtPayoffResult {
+    strategy: 'snowball' | 'avalanche';
+    payoffDate: string;
+    totalInterestPaid: number;
+    monthsToPayoff: number;
+    schedule: { month: number; date: string; liabilityName: string; payment: number; interest: number; principal: number; remainingBalance: number }[];
+}
+
+export interface EncryptedBackupEnvelope {
+    findashEncrypted: true;
+    salt: string;
+    iv: string;
+    data: string;
 }
 
 export interface UserProfile {

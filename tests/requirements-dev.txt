@@ -1,0 +1,6 @@
+# E2E test dependencies (Playwright + pytest)
+# Install with: pip install -r tests/requirements-dev.txt
+# Then install the browser: python -m playwright install chromium
+pytest>=8.0
+pytest-playwright>=0.5.0
+pytest-html>=4.1

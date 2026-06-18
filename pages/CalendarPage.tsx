@@ -145,7 +145,7 @@ const CalendarPage: React.FC<CalendarPageProps> = (props) => {
     };
 
     const handleModalSave = (item: BudgetItem | Omit<BudgetItem, 'id'>, scope?: 'one' | 'future', occurrenceDate?: string) => {
-        if ('id' in item && item.id) {
+        if (editingItem?.id && 'id' in item && item.id) {
             updateBudgetItem(item, scope, occurrenceDate);
         } else {
             addBudgetItem(item);

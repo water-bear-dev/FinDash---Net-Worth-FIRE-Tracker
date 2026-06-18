@@ -142,4 +142,4 @@ FinDash can automatically back up your data to your preferred cloud provider by 
 
 **Technical Specifications & Considerations:**
 *   **Storage Limits**: Your browser's LocalStorage typically has a limit of around 5MB. Because FinDash only stores text/JSON data, it is extremely difficult to hit this limit through normal usage, ensuring years of seamless tracking.
-*   **Security**: The exported `.json` backup file is **unencrypted plain text**. It contains all your detailed financial data. Please ensure you store this exported file securely on your local device or inside an encrypted vault/password manager.
+*   **Security**: The exported `.json` backup file is **unencrypted plain text** by default. Enable **Encrypt backup with passphrase** in Settings to produce an AES-GCM encrypted `.enc.json` file. Attachments are included in full backups. Please store backup files securely on your local device or inside an encrypted vault/password manager.
