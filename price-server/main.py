@@ -45,6 +45,8 @@ async def rate_limit_middleware(request: Request, call_next):
 # In-memory cache
 # { "TICKER": {"price": float, "timestamp": float} }
 price_cache: Dict[str, Dict[str, Any]] = {}
+info_cache: Dict[str, Dict[str, Any]] = {}
+history_cache: Dict[str, Dict[str, Any]] = {}
 CACHE_TTL = 300  # 5 minutes
 cache_lock = threading.Lock()
 
@@ -68,7 +70,7 @@ def set_cached_price(ticker: str, price: float):
 def root():
     return {
         "message": "FinDash Price Server is running",
-        "endpoints": ["/", "/health", "/prices?tickers=AAPL,MSFT", "/price/{ticker}", "/search?q={query}"]
+        "endpoints": ["/", "/health", "/prices?tickers=AAPL,MSFT", "/price/{ticker}", "/search?q={query}", "/history?ticker=VOO&period=1y", "/info?tickers=AAPL,VOO"]
     }
 
 @app.get("/health")
@@ -210,6 +212,73 @@ def search_tickers(q: str = Query(..., min_length=1)):
     except Exception as e:
         print(f"Search error for '{q}': {e}")
         return []
+
+@app.get("/history")
+def get_history(ticker: str = Query(...), period: str = Query("1y")):
+    """Fetch historical close prices for benchmark XIRR."""
+    ticker = ticker.upper().strip()
+    cache_key = f"{ticker}:{period}"
+    with cache_lock:
+        if cache_key in history_cache:
+            entry = history_cache[cache_key]
+            if time.time() - entry['timestamp'] < CACHE_TTL:
+                return entry['data']
+
+    try:
+        t = yf.Ticker(ticker)
+        hist = t.history(period=period)
+        if hist.empty:
+            return []
+        data = [
+            {"date": idx.strftime("%Y-%m-%d"), "close": round(float(row['Close']), 2)}
+            for idx, row in hist.iterrows()
+            if row['Close'] == row['Close']  # skip NaN
+        ]
+        with cache_lock:
+            history_cache[cache_key] = {"data": data, "timestamp": time.time()}
+        return data
+    except Exception as e:
+        print(f"History error for {ticker}: {e}")
+        return []
+
+@app.get("/info")
+def get_ticker_info(tickers: str = Query(...)):
+    """Fetch sector/country/currency metadata for diversification."""
+    ticker_list = [t.strip().upper() for t in tickers.split(",") if t.strip()]
+    results = []
+
+    for ticker in ticker_list:
+        with cache_lock:
+            if ticker in info_cache:
+                entry = info_cache[ticker]
+                if time.time() - entry['timestamp'] < CACHE_TTL:
+                    results.append(entry['data'])
+                    continue
+
+        try:
+            t = yf.Ticker(ticker)
+            info = t.info or {}
+            data = {
+                "symbol": ticker,
+                "sector": info.get("sector") or "Unknown",
+                "industry": info.get("industry") or "Unknown",
+                "country": info.get("country") or "Unknown",
+                "currency": info.get("currency") or "USD",
+            }
+            with cache_lock:
+                info_cache[ticker] = {"data": data, "timestamp": time.time()}
+            results.append(data)
+        except Exception as e:
+            print(f"Info error for {ticker}: {e}")
+            results.append({
+                "symbol": ticker,
+                "sector": "Unknown",
+                "industry": "Unknown",
+                "country": "Unknown",
+                "currency": "USD",
+            })
+
+    return results
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)

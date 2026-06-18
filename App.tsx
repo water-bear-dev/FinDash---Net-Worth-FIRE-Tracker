@@ -15,12 +15,14 @@ import FIREPage from './pages/FIREPage';
 import InvestmentsPage from './pages/InvestmentsPage';
 import { 
     CashAccount, Investment, Property, Liability, Transaction, 
-    Dividend, BudgetItem, UserProfile, AssetCategory, TargetAllocation, FireSettings, RebalancingSettings, HistoricalNetWorth
+    Dividend, BudgetItem, UserProfile, AssetCategory, TargetAllocation, FireSettings, RebalancingSettings,
+    HistoricalNetWorth, PortfolioAnalyticsSettings
 } from './types';
 import moment from 'moment';
 import { generateRecurringEvents } from './services/eventGenerator';
 import { computeSavingsRateHistory } from './services/savingsRateHistory';
 import { deleteAttachmentsForBudgetItem } from './services/attachmentService';
+import { priceServerPath } from './services/priceServerConfig';
 import { v4 as uuidv4 } from 'uuid';
 
 // --- SAMPLE DATA ---
@@ -147,6 +149,11 @@ const App: React.FC = () => {
     });
     const [historicalNetWorth, setHistoricalNetWorth] = useLocalStorage<HistoricalNetWorth[]>('historicalNetWorth', []);
     const [emergencyFundTargetMonths, setEmergencyFundTargetMonths] = useLocalStorage<number>('emergencyFundTargetMonths', 6);
+    const [dripSettings, setDripSettings] = useLocalStorage<Record<string, boolean>>('dripSettings', {});
+    const [portfolioAnalyticsSettings, setPortfolioAnalyticsSettings] = useLocalStorage<PortfolioAnalyticsSettings>('portfolioAnalyticsSettings', {
+        benchmarkTicker: 'VOO',
+        performancePeriod: '1y',
+    });
     const [isSetupComplete, setIsSetupComplete] = useLocalStorage<boolean>('isSetupComplete', false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isPricesLoading, setIsPricesLoading] = useState(false);
@@ -258,7 +265,7 @@ const App: React.FC = () => {
 
         try {
             if (useLocalPriceServer) {
-                const response = await fetch(`http://localhost:8001/prices?tickers=${tickers.join(',')}`);
+                const response = await fetch(priceServerPath(`/prices?tickers=${tickers.join(',')}`));
                 if (!response.ok) throw new Error('Local server responded with an error');
                 results = await response.json();
             }
@@ -612,7 +619,9 @@ const App: React.FC = () => {
                             } />
                             <Route path="/investments" element={
                                 <InvestmentsPage 
-                                    holdings={investments} 
+                                    holdings={investments}
+                                    transactions={transactions}
+                                    dividends={dividends}
                                     refreshPrices={refreshPrices} 
                                     isPricesLoading={isPricesLoading}
                                     targetAllocations={targetAllocations}
@@ -620,6 +629,9 @@ const App: React.FC = () => {
                                     rebalancingSettings={rebalancingSettings}
                                     setRebalancingSettings={setRebalancingSettings}
                                     monthlySavings={budgetSummary.netMonthlySavings}
+                                    dripSettings={dripSettings}
+                                    setDripSettings={setDripSettings}
+                                    portfolioAnalyticsSettings={portfolioAnalyticsSettings}
                                     formatCurrency={formatCurrency}
                                 />
                             } />

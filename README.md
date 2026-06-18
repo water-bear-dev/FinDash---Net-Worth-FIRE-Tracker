@@ -17,6 +17,7 @@ Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your bro
     *   **Monte Carlo Probabilities**: Runs thousands of simulated market paths to calculate the exact probability your portfolio will survive your chosen retirement duration.
 *   **📈 Advanced Investment Portfolio & Rebalancing Engine**: 
     *   Dedicated holdings page to track buy/sell transactions and live pricing.
+    *   **Portfolio analytics**: XIRR/TWR performance vs benchmark, FIFO realized/unrealized gains, dividend yield-on-cost, diversification breakdowns, and tax-loss harvesting suggestions.
     *   **Algorithmic Rebalancing**: Define target allocations (e.g. 80% VOO, 20% AAPL), input new capital, and the engine will calculate the exact buy/sell trades required to reach equilibrium.
     *   Visual Pie Charts comparing Current vs Target Allocation.
 *   **💰 Budgeting Engine**: 
@@ -46,7 +47,7 @@ Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your bro
 *   **Routing**: [React Router v7](https://reactrouter.com/)
 *   **Data Persistence**: LocalStorage (Browser)
 *   **APIs**: 
-    *   **Local Price Server** (Yahoo Finance via yfinance)
+    *   **Local Price Server** (Yahoo Finance via yfinance) — live prices, ticker search, historical prices for benchmarks, and sector/country metadata
     *   [Google Gemini](https://aistudio.google.com/) (AI Chatbot Assistant)
 
 ## 🏁 Getting Started
@@ -95,15 +96,96 @@ Quick command to run E2E tests:
 python3 scripts/with_server.py --server "npm run dev" --port 3000 -- python3 tests/e2e/test_dashboard.py
 ```
 
+## 🌐 Deployment
+
+FinDash has two parts that deploy separately:
+
+| Component | Type | Default |
+| --- | --- | --- |
+| **Frontend** (React/Vite) | Static site | `npm run dev` → port 3000 |
+| **Price server** (FastAPI/Python) | API service | `python3 main.py` → port 8001 |
+
+For frontend-only hosting (Vercel, Netlify, GitHub Pages), see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+### Deploying the price server to Vercel
+
+Vercel can host the Python price server as a serverless API. Deploy it as a **second Vercel project** (separate from the React frontend).
+
+**Prerequisites**
+- Repository pushed to GitHub, GitLab, or Bitbucket
+- A Vercel account ([vercel.com](https://vercel.com))
+
+**Step 1 — Create the price-server project**
+
+1. In the Vercel dashboard, click **Add New** → **Project**.
+2. Import the same FinDash repository.
+3. Under **Root Directory**, click **Edit** and set it to `price-server`.
+4. Vercel should detect Python and `requirements.txt`. No custom build command is needed.
+5. Click **Deploy**.
+6. When finished, copy your deployment URL (e.g. `https://findash-prices.vercel.app`).
+
+**Step 2 — Verify the deployment**
+
+```bash
+curl https://YOUR-PRICE-SERVER-URL.vercel.app/health
+# Expected: {"status":"healthy","cache_size":0}
+
+curl "https://YOUR-PRICE-SERVER-URL.vercel.app/prices?tickers=AAPL"
+# Expected: [{"symbol":"AAPL","price":...,"source":"live"}]
+```
+
+**Step 3 — Point the frontend at the deployed server**
+
+The frontend reads the price server URL from the `VITE_PRICE_SERVER_URL` environment variable at build time. Defaults to `http://localhost:8001` when unset.
+
+**On Vercel (frontend project):**
+
+1. Open your **frontend** Vercel project → **Settings** → **Environment Variables**.
+2. Add:
+   - **Name:** `VITE_PRICE_SERVER_URL`
+   - **Value:** `https://YOUR-PRICE-SERVER-URL.vercel.app` (no trailing slash)
+3. Redeploy the frontend so the variable is baked into the build.
+
+**For local development against a remote server**, create `.env.local` in the project root:
+
+```bash
+VITE_PRICE_SERVER_URL=https://YOUR-PRICE-SERVER-URL.vercel.app
+```
+
+Restart `npm run dev` after changing `.env.local`.
+
+**Step 4 — Enable in the app**
+
+In FinDash **Settings**, ensure **Local yfinance Server** is enabled (on by default).
+
+### Serverless caveats (Vercel)
+
+- **Cold starts:** The first request after idle time can take several seconds while the function spins up.
+- **No persistent cache:** In-memory caching resets between invocations; yfinance may be called more often than on a local server.
+- **Timeout:** Hobby plan functions time out after 10 seconds. Large batch price requests may fail — split tickers or upgrade to Pro (60s timeout).
+- **Privacy:** Market data requests go to *your* deployed price server, not a FinDash-operated backend. Ticker symbols are sent; your portfolio balances and personal data stay in the browser.
+
+### Alternative hosts (always-on Python)
+
+If you need a traditional long-running server (persistent cache, no cold starts), consider:
+
+| Provider | Notes |
+| --- | --- |
+| [Render](https://render.com) | Web Service, root dir `price-server`, start command `uvicorn main:app --host 0.0.0.0 --port $PORT` |
+| [Railway](https://railway.app) | Deploy from `price-server/`, set start command above |
+| [Fly.io](https://fly.io) | Docker or `fly launch` in `price-server/` |
+
+Use the same `VITE_PRICE_SERVER_URL` value (your Render/Railway/Fly URL) when building the frontend.
+
 ## ⚙️ Configuration
 
 To unlock the full power of the dashboard, you need to configure a few settings inside the app:
 
 1.  **Market Data (Stock Prices)**: 
-    FinDash uses a bundled Python microservice to fetch real-time market data without requiring expensive API keys or hitting strict cloud limits. Ensure you have started the server in Terminal 2 (as outlined in the **Getting Started** section).
+    FinDash uses a Python microservice to fetch real-time market data without requiring expensive API keys. For local development, start the server in Terminal 2 (see **Getting Started**). For production, deploy the price server separately and set `VITE_PRICE_SERVER_URL` (see **Deployment**).
     
     **Enable in App**:
-    In FinDash **Settings**, ensure the **Local Price Server** toggle is enabled (it is ON by default).
+    In FinDash **Settings**, ensure the **Local yfinance Server** toggle is enabled (it is ON by default).
 
 2.  **Profile & Goals**:
     *   In **Settings**, set your **Target Annual Spending** (this drives the FIRE progress calculations).
@@ -121,7 +203,7 @@ To unlock the full power of the dashboard, you need to configure a few settings 
 
 ## 🛡️ Privacy & Data Portability
 
-This application is designed with privacy first. **All your financial data is stored locally in your browser's LocalStorage.** No personal financial data is ever sent to a remote server or database managed by this project. Market data requests are made to your own local Python server (`localhost:8001`).
+This application is designed with privacy first. **All your financial data is stored locally in your browser's LocalStorage.** No personal financial data is ever sent to a remote server or database managed by this project. Market data requests (ticker symbols only) are sent to your configured price server — locally at `localhost:8001` by default, or your own deployed URL via `VITE_PRICE_SERVER_URL`.
 
 ### Data Backup & Migration (Export / Import)
 Since there is no centralized database, your data does not automatically sync across devices. To migrate your data (e.g., from your laptop to your phone) or create a safe backup:

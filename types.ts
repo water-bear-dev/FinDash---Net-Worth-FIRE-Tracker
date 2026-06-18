@@ -162,3 +162,50 @@ export interface RebalancingSettings {
     brokerageFee: number;
     expectedReturn: number;
 }
+
+export interface TaxLot {
+    id: string;
+    ticker: string;
+    quantity: number;
+    remainingQty: number;
+    costPerUnit: number;
+    acquiredDate: string;
+}
+
+export interface RealizedGain {
+    ticker: string;
+    date: string;
+    quantity: number;
+    proceeds: number;
+    costBasis: number;
+    gain: number;
+    gainPercent: number;
+}
+
+export interface UnrealizedGain {
+    ticker: string;
+    quantity: number;
+    costBasis: number;
+    marketValue: number;
+    gain: number;
+    gainPercent: number;
+}
+
+export interface PortfolioAnalyticsSettings {
+    benchmarkTicker: string;
+    performancePeriod: '1y' | 'all';
+}
+
+export interface TickerInfo {
+    symbol: string;
+    sector: string;
+    industry: string;
+    country: string;
+    currency: string;
+}
+
+export interface TaxLossHarvestSuggestion {
+    ticker: string;
+    unrealizedLoss: number;
+    potentialOffset: number;
+}

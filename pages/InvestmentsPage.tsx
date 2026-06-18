@@ -1,13 +1,25 @@
-import React, { useState } from 'react';
-import { Investment, TargetAllocation, RebalancingSettings } from '../types';
+import React, { useMemo } from 'react';
+import { Dividend, Investment, PortfolioAnalyticsSettings, RebalancingSettings, TargetAllocation, Transaction } from '../types';
 import Card from '../components/Card';
 import InvestmentTable from '../components/InvestmentTable';
 import RebalancingEngine from '../components/RebalancingEngine';
 import HowItWorksModal from '../components/HowItWorksModal';
+import PortfolioPerformance from '../components/PortfolioPerformance';
+import GainsBreakdown from '../components/GainsBreakdown';
+import TaxLossHarvestCard from '../components/TaxLossHarvestCard';
+import DividendAnalytics from '../components/DividendAnalytics';
+import DiversificationCharts from '../components/DiversificationCharts';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
+import {
+    computeRealizedGains,
+    computeUnrealizedGains,
+    getRealizedGainsYtd,
+} from '../services/taxLots';
 
 interface InvestmentsPageProps {
     holdings: Investment[];
+    transactions: Transaction[];
+    dividends: Dividend[];
     refreshPrices: () => void;
     isPricesLoading: boolean;
     targetAllocations: TargetAllocation[];
@@ -15,11 +27,16 @@ interface InvestmentsPageProps {
     rebalancingSettings: RebalancingSettings;
     setRebalancingSettings: (settings: RebalancingSettings) => void;
     monthlySavings: number;
+    dripSettings: Record<string, boolean>;
+    setDripSettings: (settings: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
+    portfolioAnalyticsSettings: PortfolioAnalyticsSettings;
     formatCurrency: (value: number) => string;
 }
 
 const InvestmentsPage: React.FC<InvestmentsPageProps> = ({
     holdings,
+    transactions,
+    dividends,
     refreshPrices,
     isPricesLoading,
     targetAllocations,
@@ -27,9 +44,26 @@ const InvestmentsPage: React.FC<InvestmentsPageProps> = ({
     rebalancingSettings,
     setRebalancingSettings,
     monthlySavings,
+    dripSettings,
+    setDripSettings,
+    portfolioAnalyticsSettings,
     formatCurrency
 }) => {
-    const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
+    const [isHowItWorksOpen, setIsHowItWorksOpen] = React.useState(false);
+
+    const realizedGains = useMemo(() => computeRealizedGains(transactions), [transactions]);
+    const unrealizedGains = useMemo(() => computeUnrealizedGains(holdings), [holdings]);
+    const realizedYtdByTicker = useMemo(() => getRealizedGainsYtd(realizedGains), [realizedGains]);
+
+    const unrealizedByTicker = useMemo(() => {
+        const map = new Map<string, number>();
+        unrealizedGains.forEach(u => map.set(u.ticker, u.gain));
+        return map;
+    }, [unrealizedGains]);
+
+    const handleDripToggle = (ticker: string, enabled: boolean) => {
+        setDripSettings(prev => ({ ...prev, [ticker]: enabled }));
+    };
 
     return (
         <main className="space-y-6">
@@ -55,6 +89,14 @@ const InvestmentsPage: React.FC<InvestmentsPageProps> = ({
                 section="INVESTMENTS" 
             />
 
+            <PortfolioPerformance
+                transactions={transactions}
+                dividends={dividends}
+                holdings={holdings}
+                benchmarkTicker={portfolioAnalyticsSettings.benchmarkTicker}
+                formatCurrency={formatCurrency}
+            />
+
             <Card title="Current Investments">
                 <div className="flex justify-end mb-4">
                     <button 
@@ -65,8 +107,35 @@ const InvestmentsPage: React.FC<InvestmentsPageProps> = ({
                         {isPricesLoading ? 'Refreshing...' : 'Refresh Prices'}
                     </button>
                 </div>
-                <InvestmentTable investments={holdings} />
+                <InvestmentTable
+                    investments={holdings}
+                    formatCurrency={formatCurrency}
+                    unrealizedByTicker={unrealizedByTicker}
+                    realizedYtdByTicker={realizedYtdByTicker}
+                />
             </Card>
+
+            <GainsBreakdown
+                realizedGains={realizedGains}
+                unrealizedGains={unrealizedGains}
+                formatCurrency={formatCurrency}
+            />
+
+            <TaxLossHarvestCard
+                unrealizedGains={unrealizedGains}
+                realizedGains={realizedGains}
+                formatCurrency={formatCurrency}
+            />
+
+            <DividendAnalytics
+                dividends={dividends}
+                holdings={holdings}
+                dripSettings={dripSettings}
+                onDripToggle={handleDripToggle}
+                formatCurrency={formatCurrency}
+            />
+
+            <DiversificationCharts holdings={holdings} formatCurrency={formatCurrency} />
 
             <Card title="Rebalancing Engine">
                 <RebalancingEngine 

@@ -16,6 +16,8 @@ export const BACKUP_STORAGE_KEYS = [
     'rebalancingSettings',
     'historicalNetWorth',
     'emergencyFundTargetMonths',
+    'dripSettings',
+    'portfolioAnalyticsSettings',
     'useLocalPriceServer',
     'isSetupComplete',
 ] as const;

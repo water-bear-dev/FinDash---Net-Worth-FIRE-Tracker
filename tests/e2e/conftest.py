@@ -57,6 +57,8 @@ def default_state():
         "rebalancingSettings": {"brokerageFee": 9.5, "expectedReturn": 7.0},
         "emergencyFundTargetMonths": 6,
         "historicalNetWorth": [],
+        "dripSettings": {},
+        "portfolioAnalyticsSettings": {"benchmarkTicker": "VOO", "performancePeriod": "1y"},
     }
 
 
@@ -86,12 +88,45 @@ def _gemini_handler(route):
     )
 
 
+def _history_handler(route):
+    ticker_match = re.search(r"ticker=([^&]*)", route.request.url)
+    ticker = unquote(ticker_match.group(1)) if ticker_match else "VOO"
+    price = DEFAULT_PRICES.get(ticker, FALLBACK_PRICE)
+    body = [
+        {"date": "2024-01-01", "close": price * 0.85},
+        {"date": "2024-06-01", "close": price * 0.92},
+        {"date": "2025-01-01", "close": price * 0.98},
+        {"date": "2025-06-01", "close": price},
+    ]
+    route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
+
+
+def _info_handler(route):
+    match = re.search(r"tickers=([^&]*)", route.request.url)
+    tickers = []
+    if match:
+        tickers = [t for t in unquote(match.group(1)).split(",") if t]
+    body = [
+        {
+            "symbol": t,
+            "sector": "Technology" if t == "AAPL" else "ETF",
+            "industry": "Consumer Electronics" if t == "AAPL" else "Broad Market",
+            "country": "United States",
+            "currency": "USD",
+        }
+        for t in tickers
+    ]
+    route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
+
+
 def setup_mocks(page, prices=None):
     """Register network interception for the price server and Gemini."""
     merged = dict(DEFAULT_PRICES)
     if prices:
         merged.update(prices)
     page.route("**/prices*", _price_handler(merged))
+    page.route("**/history*", _history_handler)
+    page.route("**/info*", _info_handler)
     page.route("**/generativelanguage.googleapis.com/**", _gemini_handler)
 
 

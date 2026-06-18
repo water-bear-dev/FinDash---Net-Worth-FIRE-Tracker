@@ -34,19 +34,36 @@ These leverage data already captured and slot into existing pages/charts.
 
 ---
 
-## Phase 2 — Investment analytics
+## Phase 2 — Investment analytics ✅ Shipped
 
 Builds on the existing transaction ledger and dividend records.
 
+| Feature | Status | Notes |
+| --- | --- | --- |
+| **Performance metrics (XIRR / TWR)** | ✅ | Portfolio XIRR, TWR, benchmark comparison on Investments page |
+| **Realized vs. unrealized gains** | ✅ | FIFO tax lots; generic gains (no jurisdiction-specific CGT) |
+| **Dividend analytics + DRIP** | ✅ | Yield on cost, projected income, DRIP projection toggle |
+| **Diversification breakdowns** | ✅ | Sector / geography / currency / asset class charts |
+| **Tax-loss harvesting suggestions** | ✅ | Informational card for holdings at a loss |
+
+**Exit criteria:** Investments page shows return metrics and gain/loss breakdowns; calculations validated via E2E tests.
+
+---
+
+## Phase 2 (original spec) — reference
+
+<details>
+<summary>Original planning notes</summary>
+
 | Feature | Value | Effort | Reuses | Notes |
 | --- | --- | --- | --- | --- |
-| **Performance metrics (XIRR / time-weighted return)** | ★★★ | M | `Transaction` (dated buy/sell) | True money-weighted returns + benchmark comparison (e.g. vs VOO). |
-| **Realized vs. unrealized gains + CGT estimate** | ★★ | M–L | `Transaction` | Tax-lot tracking; AUD CGT-discount (>12 months held) estimate as a standout. |
+| **Performance metrics (XIRR / time-weighted return)** | ★★★ | M | `Transaction` | True money-weighted returns + benchmark comparison (e.g. vs VOO). |
+| **Realized vs. unrealized gains** | ★★ | M–L | `Transaction` | FIFO tax-lot tracking (generic gains only). |
 | **Dividend analytics + DRIP** | ★★ | S–M | `Dividend` | Yield-on-cost, annual income projection, reinvestment toggle. |
 | **Diversification breakdowns** | ★ | S | `Investment`, `AllocationDonutChart` | Sector / geography / currency exposure charts. |
 | **Tax-loss harvesting suggestions** | ★ | M | `Investment`, `Transaction` | Flag holdings at a loss that could offset realized gains. |
 
-**Exit criteria:** Investments page shows return metrics and gain/loss breakdowns; calculations validated against worked examples.
+</details>
 
 ---
 
