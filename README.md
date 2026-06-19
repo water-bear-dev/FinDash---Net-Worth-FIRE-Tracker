@@ -8,6 +8,26 @@
 
 Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your browser. Your financial data is stored securely in your browser's local storage—no external database required.
 
+## 📸 Screenshots
+
+### Dashboard & daily tracking
+
+| Dashboard | Expenses | Calendar |
+| --- | --- | --- |
+| ![FinDash dashboard showing net worth, budget summary, emergency fund, and FIRE progress](public/screenshot-dashboard.png) | ![Expenses page with monthly summary, category donut chart, and transaction table](public/screenshot-expenses.png) | ![Financial calendar with recurring income, expenses, and bills](public/screenshot-calendar.png) |
+
+### Cash flow, investments & FIRE
+
+| Cash Flow | Ledger | Investments |
+| --- | --- | --- |
+| ![Cash flow page comparing planned vs actual budget with category variance and trends](public/screenshot-cash-flow.png) | ![Portfolio dashboard with transaction history and performance by asset class](public/screenshot-ledger.png) | ![Portfolio holdings with performance metrics, allocations, and gains breakdown](public/screenshot-investments.png) |
+
+| FIRE Journey |
+| --- |
+| ![FIRE dashboard with progress tracking and Monte Carlo retirement simulator](public/screenshot-fire.png) |
+
+*Screenshots use the built-in demo profile so you can explore the app before entering your own data.*
+
 ## 🚀 Key Features
 
 *   **📊 Net Worth Dashboard**: Visualize your financial health in real-time. Automatically aggregates your **Assets** (Cash, Stocks, Crypto, Property) and **Liabilities** (Loans, Mortgages) to calculate your Net Worth.
