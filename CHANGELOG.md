@@ -8,7 +8,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/). Versions
 
 ## [Unreleased]
 
-### Added — Phase 2: Investment Analytics
+### Added — Phase 3: Cash Flow & Forecasting
+
+- **Cash Flow page**: Budget vs actual variance by category, 6-month expense trend chart, month picker.
+- **Planned vs actual logic**: `generatePlannedEvents()` for recurring templates; full `generateRecurringEvents()` for actuals.
+- **Bank CSV import**: Upload, preview, rule-based categorization, optional Gemini enhancement, dedup via `importId`.
+- **FIRE what-if sandbox**: Side-by-side scenario comparison on FIRE page; presets (+$500/mo, 7% returns, Lean FIRE).
+- **Alerts**: In-app bell for bill due, low cash, rebalance drift, emergency fund met, FIRE milestones, budget over.
+- **Alert settings**: Configurable thresholds in Settings.
+- **E2E**: `tests/e2e/test_phase3_cashflow.py` (10 tests); suite total **58 passing**.
+
+### Changed
+
+- **Sidebar**: New Cash Flow nav link under Daily Tracking.
+- **TopBar**: Alert bell with dismiss support.
+- **Backup keys**: `fireScenarios`, `alertSettings`, `achievedMilestones` included in full JSON export.
+
+---
+
+## [2026-06-18] — Phase 2: Investment Analytics
+
+### Added
 
 - **Portfolio performance**: XIRR, TWR, and benchmark comparison (default `VOO`) on the Investments page.
 - **FIFO tax lots**: Realized and unrealized gains breakdown with per-ticker summary (generic gains only; no jurisdiction-specific CGT).
@@ -17,13 +37,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/). Versions
 - **Diversification charts**: Sector, geography, currency, and asset-class breakdowns via price-server metadata.
 - **Tax-loss harvesting**: Informational suggestions for holdings at a loss.
 - **Price server**: `/history` and `/info` endpoints for benchmark prices and ticker metadata.
-- **E2E**: `tests/e2e/test_phase2_investments.py` (7 tests); suite total **48 passing**.
+- **E2E**: `tests/e2e/test_phase2_investments.py` (7 tests).
 
 ### Changed
 
 - **Investments page**: Expanded layout — performance, gains, dividends, diversification, then rebalancing.
 - **E2E mocks**: `conftest.py` now intercepts `/history` and `/info` for offline tests.
 - **Backup keys**: `dripSettings` and `portfolioAnalyticsSettings` included in full JSON export.
+- **Price server URL**: Configurable via `VITE_PRICE_SERVER_URL` for deployed environments.
 
 ---
 

@@ -82,6 +82,85 @@ export interface BudgetItem {
     originalId?: string;
     description?: string;
     attachmentIds?: string[];
+    importId?: string;
+    importSource?: 'csv' | 'manual';
+}
+
+export interface CategoryVariance {
+    category: string;
+    type: 'income' | 'expense';
+    planned: number;
+    actual: number;
+    variance: number;
+    variancePercent: number;
+}
+
+export interface MonthlyVarianceSummary {
+    month: string;
+    totalPlannedExpenses: number;
+    totalActualExpenses: number;
+    totalPlannedIncome: number;
+    totalActualIncome: number;
+    byCategory: CategoryVariance[];
+}
+
+export interface CategoryTrendPoint {
+    month: string;
+    category: string;
+    amount: number;
+    type: 'income' | 'expense';
+}
+
+export interface ParsedCsvRow {
+    date: string;
+    description: string;
+    amount: number;
+    type: 'income' | 'expense';
+    suggestedCategory: string;
+    selected: boolean;
+    importId: string;
+}
+
+export interface FireScenario {
+    id: string;
+    name: string;
+    monthlySavings: number;
+    targetAnnualSpending: number;
+    expectedReturn: number;
+    swr: number;
+    inflationRate: number;
+    taxRate: number;
+}
+
+export interface FireScenarioResult {
+    scenarioId: string;
+    scenarioName: string;
+    baseTarget: number;
+    inflationAdjustedTarget: number;
+    preTaxTarget: number;
+    probabilityOfSuccess: number;
+    yearsToFIRE: number;
+}
+
+export type AlertType = 'bill_due' | 'low_cash' | 'rebalance_drift' | 'emergency_fund_met' | 'fire_milestone' | 'budget_over';
+
+export interface FinDashAlert {
+    id: string;
+    type: AlertType;
+    message: string;
+    severity: 'info' | 'warning';
+    createdAt: string;
+    relatedDate?: string;
+}
+
+export interface AlertSettings {
+    enabled: boolean;
+    billDueDaysBefore: number;
+    lowCashThreshold: number;
+    rebalanceDriftPercent: number;
+    budgetOverPercent: number;
+    browserNotifications: boolean;
+    dismissedAlertIds: string[];
 }
 
 export interface BudgetAttachment {

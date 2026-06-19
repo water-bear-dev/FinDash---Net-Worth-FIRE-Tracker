@@ -59,6 +59,17 @@ def default_state():
         "historicalNetWorth": [],
         "dripSettings": {},
         "portfolioAnalyticsSettings": {"benchmarkTicker": "VOO", "performancePeriod": "1y"},
+        "fireScenarios": [],
+        "alertSettings": {
+            "enabled": True,
+            "billDueDaysBefore": 3,
+            "lowCashThreshold": 1000,
+            "rebalanceDriftPercent": 5,
+            "budgetOverPercent": 10,
+            "browserNotifications": False,
+            "dismissedAlertIds": [],
+        },
+        "achievedMilestones": [],
     }
 
 

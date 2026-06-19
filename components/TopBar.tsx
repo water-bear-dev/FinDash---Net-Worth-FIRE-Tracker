@@ -1,14 +1,18 @@
 import React from 'react';
 import { Bars3Icon } from '@heroicons/react/24/outline';
+import AlertBell from './AlertBell';
+import { FinDashAlert } from '../types';
 
 interface TopBarProps {
     theme: string;
     toggleTheme: () => void;
     userName: string;
     toggleSidebar: () => void;
+    alerts: FinDashAlert[];
+    onDismissAlert: (id: string) => void;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ theme, toggleTheme, userName, toggleSidebar }) => {
+const TopBar: React.FC<TopBarProps> = ({ theme, toggleTheme, userName, toggleSidebar, alerts, onDismissAlert }) => {
     return (
         <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
             <div className="flex items-center">
@@ -23,13 +27,16 @@ const TopBar: React.FC<TopBarProps> = ({ theme, toggleTheme, userName, toggleSid
                     Welcome{userName ? `, ${userName}` : ''}
                 </h1>
             </div>
-            <button
-                onClick={toggleTheme}
-                className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                aria-label="Toggle theme"
-            >
-                {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-            </button>
+            <div className="flex items-center gap-2">
+                <AlertBell alerts={alerts} onDismiss={onDismissAlert} />
+                <button
+                    onClick={toggleTheme}
+                    className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    aria-label="Toggle theme"
+                >
+                    {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+                </button>
+            </div>
         </header>
     );
 };

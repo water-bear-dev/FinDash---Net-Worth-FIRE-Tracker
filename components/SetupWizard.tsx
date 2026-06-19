@@ -8,12 +8,14 @@ interface SetupWizardProps {
         properties: Property[];
         liabilities: Liability[];
         targetAnnualSpending: number;
+        currency: string;
     }) => void;
     onSkip: () => void;
+    onExploreWithMockData: () => void;
 }
 
-const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onSkip }) => {
-    const [step, setStep] = useState(1);
+const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onSkip, onExploreWithMockData }) => {
+    const [step, setStep] = useState(0);
     const [profile, setProfile] = useState<UserProfile>({ name: '', email: '' });
     const [cash, setCash] = useState<CashAccount[]>([]);
     const [props, setProps] = useState<Property[]>([]);
@@ -65,12 +67,52 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onSkip }) => {
                 <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800">
                     <div 
                         className="h-full bg-indigo-600 transition-all duration-500" 
-                        style={{ width: `${(step / 5) * 100}%` }}
+                        style={{ width: step === 0 ? '0%' : `${(step / 5) * 100}%` }}
                     />
                 </div>
 
                 {/* Content */}
                 <div className="p-8 min-h-[400px] flex flex-col">
+                    {step === 0 && (
+                        <div className="space-y-8 animate-in slide-in-from-right-8 duration-300 flex-1 flex flex-col justify-center">
+                            <div className="text-center space-y-2">
+                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 mb-2 mx-auto">
+                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                </div>
+                                <h3 className="text-xl font-semibold dark:text-white">How would you like to get started?</h3>
+                                <p className="text-sm text-gray-500 max-w-md mx-auto">
+                                    Explore FinDash with realistic sample data, or enter your own finances step by step.
+                                </p>
+                            </div>
+                            <div className="grid sm:grid-cols-2 gap-4 max-w-xl mx-auto w-full">
+                                <button
+                                    type="button"
+                                    onClick={onExploreWithMockData}
+                                    className="group text-left p-6 rounded-xl border-2 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-900/20 hover:border-indigo-500 dark:hover:border-indigo-500 hover:shadow-lg transition-all"
+                                    data-testid="explore-mock-data-btn"
+                                >
+                                    <span className="text-2xl mb-3 block" aria-hidden="true">✨</span>
+                                    <span className="block font-semibold text-gray-900 dark:text-white mb-1">Explore with sample data</span>
+                                    <span className="block text-sm text-gray-500 dark:text-gray-400">
+                                        Prefilled demo profile with investments, budget, and FIRE goals so you can click around freely.
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setStep(1)}
+                                    className="group text-left p-6 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-indigo-400 dark:hover:border-indigo-600 hover:shadow-lg transition-all"
+                                    data-testid="start-real-setup-btn"
+                                >
+                                    <span className="text-2xl mb-3 block" aria-hidden="true">📝</span>
+                                    <span className="block font-semibold text-gray-900 dark:text-white mb-1">Set up my finances</span>
+                                    <span className="block text-sm text-gray-500 dark:text-gray-400">
+                                        Walk through a short wizard to add your accounts, assets, and spending goals.
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {step === 1 && (
                         <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
                             <div className="text-center space-y-2">
@@ -283,25 +325,29 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onSkip }) => {
                     )}
 
                     {/* Footer Actions */}
-                    <div className="mt-auto pt-8 flex justify-between items-center">
-                        {step > 1 ? (
-                            <button onClick={prevStep} className={btnSecondaryClasses}>Back</button>
-                        ) : <div />}
-                        
-                        {step < 5 ? (
-                            <button 
-                                onClick={nextStep} 
-                                disabled={step === 1 && !profile.name.trim()}
-                                className={btnPrimaryClasses}
-                            >
-                                Next Step
-                            </button>
-                        ) : (
-                            <button onClick={handleFinish} className={`${btnPrimaryClasses} bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700`}>
-                                Finish Setup
-                            </button>
-                        )}
-                    </div>
+                    {step > 0 && (
+                        <div className="mt-auto pt-8 flex justify-between items-center">
+                            {step > 1 ? (
+                                <button onClick={prevStep} className={btnSecondaryClasses}>Back</button>
+                            ) : (
+                                <button onClick={() => setStep(0)} className={btnSecondaryClasses}>Back</button>
+                            )}
+                            
+                            {step < 5 ? (
+                                <button 
+                                    onClick={nextStep} 
+                                    disabled={step === 1 && !profile.name.trim()}
+                                    className={btnPrimaryClasses}
+                                >
+                                    Next Step
+                                </button>
+                            ) : (
+                                <button onClick={handleFinish} className={`${btnPrimaryClasses} bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700`}>
+                                    Finish Setup
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

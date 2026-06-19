@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import ChatbotWidget from './components/ChatbotWidget';
 import SetupWizard from './components/SetupWizard';
+import DemoModeBanner from './components/DemoModeBanner';
 import DashboardPage from './pages/DashboardPage';
 import ManageDataPage from './pages/ManageDataPage';
 import TransactionsPage from './pages/TransactionsPage';
@@ -13,87 +14,20 @@ import SettingsPage from './pages/SettingsPage';
 import IncomesPage from './pages/IncomesPage';
 import FIREPage from './pages/FIREPage';
 import InvestmentsPage from './pages/InvestmentsPage';
+import CashFlowPage from './pages/CashFlowPage';
 import { 
     CashAccount, Investment, Property, Liability, Transaction, 
     Dividend, BudgetItem, UserProfile, AssetCategory, TargetAllocation, FireSettings, RebalancingSettings,
-    HistoricalNetWorth, PortfolioAnalyticsSettings
+    HistoricalNetWorth, PortfolioAnalyticsSettings, FireScenario, AlertSettings
 } from './types';
 import moment from 'moment';
 import { generateRecurringEvents } from './services/eventGenerator';
 import { computeSavingsRateHistory } from './services/savingsRateHistory';
 import { deleteAttachmentsForBudgetItem } from './services/attachmentService';
 import { priceServerPath } from './services/priceServerConfig';
+import { evaluateAlerts, DEFAULT_ALERT_SETTINGS } from './services/alertEngine';
+import { applyMockProfileToStorage, clearAppDataForSetup } from './services/mockData';
 import { v4 as uuidv4 } from 'uuid';
-
-// --- SAMPLE DATA ---
-
-const sampleCashAccounts: CashAccount[] = [
-  { id: 'c1', name: 'Main Checking Account', balance: 25480.50 },
-  { id: 'c2', name: 'High-Yield Savings', balance: 50210.11 },
-];
-
-const sampleProperties: Property[] = [
-  { id: 'p1', name: 'Primary Residence', currentValue: 850000, category: AssetCategory.Property },
-];
-
-const sampleLiabilities: Liability[] = [
-  { id: 'l1', name: 'Mortgage', outstandingBalance: 425000, interestRate: 3.25 },
-  { id: 'l2', name: 'Car Loan', outstandingBalance: 15200, interestRate: 5.1 },
-];
-
-const sampleTransactions: Transaction[] = [
-  { id: 't1', ticker: 'VOO', category: AssetCategory.ETF, type: 'buy', date: '2022-05-10', quantity: 20, pricePerUnit: 380.50 },
-  { id: 't2', ticker: 'AAPL', category: AssetCategory.Stock, type: 'buy', date: '2022-06-15', quantity: 50, pricePerUnit: 140.20 },
-  { id: 't3', ticker: 'MSFT', category: AssetCategory.Stock, type: 'buy', date: '2023-01-20', quantity: 30, pricePerUnit: 240.00 },
-  { id: 't4', ticker: 'VOO', category: AssetCategory.ETF, type: 'buy', date: '2023-03-12', quantity: 15, pricePerUnit: 360.75 },
-  { id: 't5', ticker: 'NVDA', category: AssetCategory.Stock, type: 'buy', date: '2023-09-01', quantity: 10, pricePerUnit: 485.00 },
-  { id: 't6', ticker: 'AAPL', category: AssetCategory.Stock, type: 'sell', date: '2024-02-28', quantity: 10, pricePerUnit: 180.00 },
-  // NOTE: Crypto price fetching is not fully implemented in marketDataService, so this may not show a live value.
-  { id: 't7', ticker: 'ETH-USD', category: AssetCategory.Crypto, type: 'buy', date: '2023-11-15', quantity: 2, pricePerUnit: 2000 },
-  { id: 't8', ticker: 'CBA.AX', category: AssetCategory.Stock, type: 'buy', date: '2023-10-05', quantity: 100, pricePerUnit: 95.50 },
-];
-
-const sampleDividends: Dividend[] = [
-  { id: 'd1', ticker: 'VOO', date: '2024-03-20', amount: 55.30 },
-  { id: 'd2', ticker: 'AAPL', date: '2024-05-15', amount: 9.60 },
-  { id: 'd3', ticker: 'MSFT', date: '2024-05-20', amount: 21.60 },
-];
-
-const sampleBudgetItems: BudgetItem[] = [
-  {
-    id: 'b1', name: 'Monthly Salary', category: 'Salary', amount: 7500, type: 'income', date: '2024-01-05', isRecurring: true,
-    recurringSettings: { frequency: 'monthly', endCondition: 'never' },
-  },
-  {
-    id: 'b2', name: 'Consulting Gig', category: 'Side Job', amount: 1200, type: 'income', date: '2024-05-15', isRecurring: false,
-  },
-  {
-    id: 'b3', name: 'Mortgage Payment', category: 'Rent/Mortgage', amount: 2200, type: 'expense', date: '2024-01-01', isRecurring: true,
-    recurringSettings: { frequency: 'monthly', endCondition: 'liability', endLiabilityId: 'l1' },
-  },
-   {
-    id: 'b4', name: 'Car Payment', category: 'Car Payment/Lease', amount: 450, type: 'expense', date: '2024-01-15', isRecurring: true,
-    recurringSettings: { frequency: 'monthly', endCondition: 'liability', endLiabilityId: 'l2' },
-  },
-  {
-    id: 'b5', name: 'Groceries', category: 'Groceries & Food Staples', amount: 800, type: 'expense', date: '2024-01-07', isRecurring: true,
-    recurringSettings: { frequency: 'monthly', endCondition: 'never' },
-  },
-  {
-    id: 'b6', name: 'Utilities', category: 'Electricity, Gas, Water', amount: 250, type: 'expense', date: '2024-01-10', isRecurring: true,
-    recurringSettings: { frequency: 'monthly', endCondition: 'never' },
-  },
-  {
-    id: 'b7', name: 'Internet', category: 'Internet, Phone, Cable', amount: 80, type: 'expense', date: '2024-01-18', isRecurring: true,
-    recurringSettings: { frequency: 'monthly', endCondition: 'never' },
-  },
-  {
-    id: 'b8', name: 'Investment Contribution', category: 'Investment Contributions (Non-Retirement)', amount: 1500, type: 'expense', date: '2024-01-05', isRecurring: true,
-    recurringSettings: { frequency: 'monthly', endCondition: 'never' },
-  },
-];
-
-const sampleUserProfile: UserProfile = { name: 'Alex Doe', email: 'alex.doe@example.com' };
 
 // A simple hook for using localStorage
 function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
@@ -154,7 +88,11 @@ const App: React.FC = () => {
         benchmarkTicker: 'VOO',
         performancePeriod: '1y',
     });
+    const [fireScenarios, setFireScenarios] = useLocalStorage<FireScenario[]>('fireScenarios', []);
+    const [alertSettings, setAlertSettings] = useLocalStorage<AlertSettings>('alertSettings', DEFAULT_ALERT_SETTINGS);
+    const [achievedMilestones, setAchievedMilestones] = useLocalStorage<number[]>('achievedMilestones', []);
     const [isSetupComplete, setIsSetupComplete] = useLocalStorage<boolean>('isSetupComplete', false);
+    const [isDemoMode, setIsDemoMode] = useLocalStorage<boolean>('isDemoMode', false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isPricesLoading, setIsPricesLoading] = useState(false);
 
@@ -172,7 +110,18 @@ const App: React.FC = () => {
         setLiabilities(data.liabilities);
         setTargetAnnualSpending(data.targetAnnualSpending);
         setCurrency(data.currency);
+        setIsDemoMode(false);
         setIsSetupComplete(true);
+    };
+
+    const loadMockData = () => {
+        applyMockProfileToStorage();
+        window.location.reload();
+    };
+
+    const continueRealSetup = () => {
+        clearAppDataForSetup();
+        window.location.reload();
     };
 
     // Background Auto Sync
@@ -495,6 +444,38 @@ const App: React.FC = () => {
             .reduce((acc, item) => acc + item.amount, 0);
     }, [budgetItems, liabilities]);
 
+    const dismissAlert = useCallback((id: string) => {
+        setAlertSettings(prev => ({
+            ...prev,
+            dismissedAlertIds: [...(prev.dismissedAlertIds || []), id],
+        }));
+    }, [setAlertSettings]);
+
+    const activeAlerts = useMemo(() => evaluateAlerts({
+        budgetItems,
+        liabilities,
+        cashAccounts,
+        investments,
+        targetAllocations,
+        netWorth,
+        targetAnnualSpending,
+        fireSettings,
+        emergencyFundTargetMonths,
+        monthlyExpenses: budgetSummary.totalExpenses,
+        alertSettings,
+        achievedMilestones,
+    }), [budgetItems, liabilities, cashAccounts, investments, targetAllocations, netWorth, targetAnnualSpending, fireSettings, emergencyFundTargetMonths, budgetSummary.totalExpenses, alertSettings, achievedMilestones]);
+
+    useEffect(() => {
+        const fireTarget = targetAnnualSpending / (fireSettings.swr / 100);
+        const progress = fireTarget > 0 ? (netWorth / fireTarget) * 100 : 0;
+        const milestones = [25, 50, 75, 100];
+        const newlyAchieved = milestones.filter(m => progress >= m && !achievedMilestones.includes(m));
+        if (newlyAchieved.length > 0) {
+            setAchievedMilestones(prev => [...prev, ...newlyAchieved]);
+        }
+    }, [netWorth, targetAnnualSpending, fireSettings.swr, achievedMilestones, setAchievedMilestones]);
+
 
     // Helper functions
     const formatCurrency = useCallback((value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(value), [currency]);
@@ -510,7 +491,11 @@ const App: React.FC = () => {
             <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${theme}`}>
                 <SetupWizard 
                     onComplete={completeSetup} 
-                    onSkip={() => setIsSetupComplete(true)} 
+                    onSkip={() => {
+                        setIsDemoMode(false);
+                        setIsSetupComplete(true);
+                    }}
+                    onExploreWithMockData={loadMockData}
                 />
             </div>
         );
@@ -521,7 +506,8 @@ const App: React.FC = () => {
             <div className={`flex h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-indigo-950 ${theme}`}>
                 <Sidebar isCollapsed={isSidebarCollapsed} />
                 <div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'ml-0 sm:ml-20' : 'ml-0 sm:ml-64'}`}>
-                    <TopBar theme={theme} toggleTheme={toggleTheme} userName={userProfile.name} toggleSidebar={toggleSidebar} />
+                    <TopBar theme={theme} toggleTheme={toggleTheme} userName={userProfile.name} toggleSidebar={toggleSidebar} alerts={activeAlerts} onDismissAlert={dismissAlert} />
+                    {isDemoMode && <DemoModeBanner onContinueSetup={continueRealSetup} />}
                     <main className="flex-1 p-6 overflow-y-auto">
                         <Routes>
                             <Route path="/" element={
@@ -607,6 +593,15 @@ const App: React.FC = () => {
                                     removeBudgetItem={deleteBudgetItemWithScope}
                                 />
                             } />
+                            <Route path="/cashflow" element={
+                                <CashFlowPage
+                                    budgetItems={budgetItems}
+                                    liabilities={liabilities}
+                                    geminiApiKey={geminiApiKey}
+                                    addBudgetItem={addBudgetItemAndUpdateCash}
+                                    formatCurrency={formatCurrency}
+                                />
+                            } />
                             <Route path="/fire" element={
                                 <FIREPage
                                     netWorth={netWorth}
@@ -614,6 +609,8 @@ const App: React.FC = () => {
                                     fireSettings={fireSettings}
                                     setFireSettings={setFireSettings}
                                     setTargetAnnualSpending={setTargetAnnualSpending}
+                                    savedScenarios={fireScenarios}
+                                    onSaveScenarios={setFireScenarios}
                                     formatCurrency={formatCurrency}
                                 />
                             } />
@@ -651,6 +648,10 @@ const App: React.FC = () => {
                                     saveCurrency={setCurrency}
                                     useLocalPriceServer={useLocalPriceServer}
                                     saveUseLocalPriceServer={setUseLocalPriceServer}
+                                    budgetItems={budgetItems}
+                                    addBudgetItem={addBudgetItemAndUpdateCash}
+                                    alertSettings={alertSettings}
+                                    saveAlertSettings={setAlertSettings}
                                 />
                             } />
                             <Route path="*" element={<Navigate to="/" replace />} />

@@ -23,6 +23,8 @@ Built with **React**, **TypeScript**, and **Vite**, it runs entirely in your bro
 *   **💰 Budgeting Engine**: 
     *   Manage recurring Incomes and Expenses (e.g., salary, rent, subscriptions).
     *   Smart projections: Automatically generates future financial events based on your recurring settings.
+    *   **Cash Flow analytics**: Budget vs actual variance, category trends, and bank CSV import.
+*   **🔔 Alerts**: In-app notifications for upcoming bills, low cash, rebalance drift, and FIRE milestones.
 *   **📊 Comprehensive Data Visualization**: 
     *   **Historical Net Worth Tracking**: Automatically records your net worth monthly, visualized via a dynamic Line Chart.
     *   **Asset Allocation Heatmap**: An interactive Treemap that visualizes the proportion of your entire portfolio.

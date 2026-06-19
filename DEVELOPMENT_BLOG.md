@@ -290,18 +290,63 @@ tests/e2e/test_phase2_investments.py
 
 ---
 
+## Entry 13 — Phase 3: Cash flow & forecasting (2026-06-18)
+
+**Status:** Shipped locally.
+
+### Features shipped
+| Feature | Description |
+| --- | --- |
+| Cash Flow page | Budget vs actual variance, 6-month category trends, month picker |
+| CSV bank import | Rule-based categorization, optional Gemini, dedup via `importId` |
+| FIRE what-if sandbox | Side-by-side scenarios with presets on FIRE page |
+| In-app alerts | Bill due, low cash, rebalance drift, emergency fund, FIRE milestones |
+| E2E (+10 tests) | `test_phase3_cashflow.py` → **58 total** |
+
+### Difficulties & resolutions
+
+**1. Infinite re-render from alert `useEffect`**  
+`setActiveAlerts` + `setAchievedMilestones` in the same effect caused "Maximum update depth exceeded."  
+→ Switched to `useMemo` for alert evaluation; separate effect for milestone persistence.
+
+**2. CSV import E2E lost data on navigation**  
+Init script re-seeds `localStorage` on every navigation, wiping imported rows.  
+→ Test asserts import success message in modal instead of navigating to Expenses.
+
+**3. Variance test showed $2,500 not $500**  
+Override on a different day than the recurring occurrence — both counted in actuals.  
+→ Test uses override on the 1st of the month to suppress the recurring event.
+
+**4. TopBar JSX structure**  
+AlertBell integration initially broke JSX closing tags during HMR.  
+→ Fixed wrapper div around bell + theme toggle.
+
+### New files
+```
+services/budgetVariance.ts
+services/csvImport.ts
+services/geminiCategorize.ts
+services/fireScenarios.ts
+services/alertEngine.ts
+pages/CashFlowPage.tsx
+components/CsvImportModal.tsx
+components/FireScenarioSandbox.tsx
+components/AlertBell.tsx
+tests/e2e/test_phase3_cashflow.py
+```
+
+---
+
 ## What's next
 
-**Phase 3 — Cash flow & forecasting** (per `FEATURE_ROADMAP.md`):
-- Budget vs actual variance
-- CSV bank import
-- What-if sandbox
-- Spending/income alerts
+**Phase 4 — Planning depth & FIRE variants** (per `FEATURE_ROADMAP.md`):
+- FIRE variants (Coast / Barista / Lean / Fat)
+- Multiple savings goals
+- Mortgage amortization schedule
 
 **Recommended parallel work:**
-- Commit Phase 2
-- GitHub Actions CI for the 48-test E2E suite
-- More `data-testid` hooks on chart-heavy components
+- Commit all Phase 2 + Phase 3 changes
+- GitHub Actions CI for the 58-test E2E suite
 
 ---
 

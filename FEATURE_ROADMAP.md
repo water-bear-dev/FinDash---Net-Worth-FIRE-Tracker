@@ -67,9 +67,25 @@ Builds on the existing transaction ledger and dividend records.
 
 ---
 
-## Phase 3 — Cash flow & forecasting
+## Phase 3 — Cash flow & forecasting ✅ Shipped
 
 Deepens budgeting insight and forward planning.
+
+| Feature | Status | Notes |
+| --- | --- | --- |
+| **Budget vs. actual variance** | ✅ | Cash Flow page — planned recurring vs actual events + category trends |
+| **Bank/CSV statement import** | ✅ | Rule-based categorization; optional Gemini enhancement; dedup via `importId` |
+| **What-if scenario sandbox** | ✅ | FIRE page side-by-side scenarios with presets; saved to `fireScenarios` |
+| **Alerts / notifications** | ✅ | In-app bell — bill due, low cash, rebalance drift, goals; Settings thresholds |
+
+**Exit criteria:** Users can import a statement, see budget variance, and run a side-by-side scenario.
+
+---
+
+## Phase 3 (original spec) — reference
+
+<details>
+<summary>Original planning notes</summary>
 
 | Feature | Value | Effort | Reuses | Notes |
 | --- | --- | --- | --- | --- |
@@ -78,7 +94,7 @@ Deepens budgeting insight and forward planning.
 | **What-if scenario sandbox** | ★★ | M | `fireSimulation.ts` | Clone-and-compare ("save $500 more/month", "returns 5% vs 7%"). |
 | **Alerts / notifications** | ★ | M | `rebalance.ts`, `eventGenerator.ts` | Bill due, low cash, rebalance drift, goal reached. |
 
-**Exit criteria:** Users can import a statement, see budget variance, and run a side-by-side scenario.
+</details>
 
 ---
 
@@ -105,7 +121,7 @@ Hardens the app and developer workflow.
 | --- | --- | --- | --- | --- |
 | **PWA / installable offline app** | ★★ | M | existing local-first design | Installable + offline caching; natural fit. |
 | **Household / multi-profile** | ★ | L | `UserProfile`, full state | Joint + individual views for partners. |
-| **CI workflow (GitHub Actions)** | ★ | S | existing Playwright suite (35 tests) | Run E2E on PRs; cross-browser via `--browser`. |
+| **CI workflow (GitHub Actions)** | ★ | S | existing Playwright suite (58 tests) | Run E2E on PRs; cross-browser via `--browser`. |
 | **Multi-currency holdings + FX** | ★ | L | `Investment`, price server | Per-holding currency with conversion to base. |
 
 **Exit criteria:** App installs as a PWA; CI runs the test suite on every PR.

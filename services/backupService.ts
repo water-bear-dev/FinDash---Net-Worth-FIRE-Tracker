@@ -18,8 +18,12 @@ export const BACKUP_STORAGE_KEYS = [
     'emergencyFundTargetMonths',
     'dripSettings',
     'portfolioAnalyticsSettings',
+    'fireScenarios',
+    'alertSettings',
+    'achievedMilestones',
     'useLocalPriceServer',
     'isSetupComplete',
+    'isDemoMode',
 ] as const;
 
 export function gatherBackupData(): Record<string, unknown> {

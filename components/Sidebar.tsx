@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { HomeIcon, TableCellsIcon, DocumentChartBarIcon, BanknotesIcon, CalendarIcon, Cog6ToothIcon, ArrowTrendingUpIcon, CreditCardIcon, MagnifyingGlassIcon, ChartPieIcon, FireIcon } from '@heroicons/react/24/outline';
+import { HomeIcon, TableCellsIcon, DocumentChartBarIcon, BanknotesIcon, CalendarIcon, Cog6ToothIcon, ArrowTrendingUpIcon, CreditCardIcon, MagnifyingGlassIcon, ChartPieIcon, FireIcon, ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
 
 interface SidebarProps {
     isCollapsed: boolean;
@@ -44,6 +44,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
                 <NavLink to="/calendar" className={navLinkClasses} title={isCollapsed ? 'Calendar' : undefined}>
                     <CalendarIcon className={iconClasses} />
                     <span className={textClasses}>Calendar</span>
+                </NavLink>
+                <NavLink to="/cashflow" className={navLinkClasses} title={isCollapsed ? 'Cash Flow' : undefined}>
+                    <ArrowsRightLeftIcon className={iconClasses} />
+                    <span className={textClasses}>Cash Flow</span>
                 </NavLink>
 
                 {/* Section: Ledger and Investments */}

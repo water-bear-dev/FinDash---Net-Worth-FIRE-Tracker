@@ -27,3 +27,5 @@ dist-ssr
 reports/
 test-results/
 .pytest_cache/
+
+agent_handoff.md

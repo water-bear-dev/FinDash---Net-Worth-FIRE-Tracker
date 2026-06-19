@@ -17,7 +17,7 @@ def open_app(page: Page, expect_dashboard: bool = True):
 def goto(page: Page, label: str):
     """Click a sidebar navigation link by its visible label.
 
-    Labels: Dashboard, Incomes, Expenses, Calendar, Ledger, Investments,
+    Labels: Dashboard, Incomes, Expenses, Calendar, Cash Flow, Ledger, Investments,
     FIRE Journey, Manage Data, Settings.
     """
     page.locator("aside").get_by_role("link", name=label, exact=True).click()

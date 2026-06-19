@@ -1,8 +1,8 @@
 # Agent Handoff — FinDash
 
 **Last updated:** 2026-06-18  
-**Current milestone:** Phase 1 shipped (`2a4b817`); Phase 2 implemented locally (uncommitted)  
-**Test suite:** 48 passing E2E tests (Playwright + pytest)
+**Current milestone:** Phases 1–3 shipped  
+**Test suite:** 58 passing E2E tests (Playwright + pytest)
 
 ---
 
@@ -15,7 +15,7 @@
 | Frontend | React 19, TypeScript, Vite, Tailwind, Recharts |
 | State | `localStorage` via `useLocalStorage` in `App.tsx` |
 | Attachments | IndexedDB (`FinDashAttachmentsDB`) |
-| Market data | Local Python price server (`localhost:8001`, yfinance) |
+| Market data | Python price server (`VITE_PRICE_SERVER_URL` or `localhost:8001`) |
 | AI (optional) | Google Gemini (BYO API key) |
 | Tests | Playwright (Python) + pytest, offline mocks |
 
@@ -25,7 +25,7 @@ Fresh browsers show `SetupWizard` until `isSetupComplete=true` in `localStorage`
 
 ## 2. What was built (recent phases)
 
-### Phase 1 — Quick wins ✅ (`2a4b817`, 2026-06-18)
+### Phase 1 — Quick wins ✅
 
 | Feature | Key files |
 | --- | --- |
@@ -35,9 +35,8 @@ Fresh browsers show `SetupWizard` until `isSetupComplete=true` in `localStorage`
 | Emergency fund tracker | `App.tsx`, `DashboardPage.tsx`, `SettingsPage.tsx` |
 | Encrypted backups | `services/cryptoService.ts`, `services/backupService.ts` |
 | Receipt/invoice attachments | `services/attachmentService.ts`, `BudgetItemModal.tsx` |
-| E2E (41 tests at ship) | `tests/e2e/test_phase1_features.py`, expanded suite |
 
-### Phase 2 — Investment analytics ✅ (local, unreleased)
+### Phase 2 — Investment analytics ✅
 
 | Feature | Key files |
 | --- | --- |
@@ -48,9 +47,22 @@ Fresh browsers show `SetupWizard` until `isSetupComplete=true` in `localStorage`
 | Diversification charts | `services/diversification.ts`, `components/DiversificationCharts.tsx` |
 | Tax-loss harvesting | `services/taxLossHarvesting.ts`, `components/TaxLossHarvestCard.tsx` |
 | Price server `/history`, `/info` | `price-server/main.py` |
-| E2E (+7 tests) | `tests/e2e/test_phase2_investments.py` |
 
-**Investments page section order:** Performance → Holdings → Gains → Tax-loss → Dividends → Diversification → Rebalancing.
+### Phase 3 — Cash flow & forecasting ✅
+
+| Feature | Key files |
+| --- | --- |
+| Budget vs actual variance | `services/budgetVariance.ts`, `pages/CashFlowPage.tsx` |
+| Planned events helper | `generatePlannedEvents()` in `services/eventGenerator.ts` |
+| Bank CSV import | `services/csvImport.ts`, `components/CsvImportModal.tsx` |
+| Gemini categorization (optional) | `services/geminiCategorize.ts` |
+| FIRE what-if sandbox | `services/fireScenarios.ts`, `components/FireScenarioSandbox.tsx` |
+| In-app alerts | `services/alertEngine.ts`, `components/AlertBell.tsx` |
+| E2E (+10 tests) | `tests/e2e/test_phase3_cashflow.py` |
+
+**Cash Flow page** (`#/cashflow`): variance table, trend chart, CSV import button.  
+**FIRE page**: scenario sandbox below Monte Carlo simulator.  
+**TopBar**: alert bell; **Settings**: alert thresholds + CSV import shortcut.
 
 ---
 
@@ -58,22 +70,21 @@ Fresh browsers show `SetupWizard` until `isSetupComplete=true` in `localStorage`
 
 ```
 App.tsx (localStorage state)
-  ├── DashboardPage      — net worth, savings trend, forecast, emergency fund
-  ├── InvestmentsPage    — analytics (Phase 2), rebalancing
-  ├── ManageDataPage     — CRUD + debt payoff planner
-  ├── SettingsPage       — backup, encryption, sync, profile
+  ├── CashFlowPage       — variance, trends, CSV import
+  ├── FIREPage           — simulator + scenario sandbox
+  ├── TopBar             — AlertBell
   └── services/
-        ├── taxLots.ts           — FIFO realized/unrealized
-        ├── portfolioPerformance.ts — XIRR, TWR, benchmark
-        ├── attachmentService.ts — IndexedDB blobs
-        ├── cryptoService.ts     — AES-GCM backup encryption
-        └── backupService.ts     — centralized export keys
+        ├── budgetVariance.ts    — planned vs actual
+        ├── csvImport.ts         — bank CSV parse + dedup
+        ├── fireScenarios.ts     — what-if comparisons
+        ├── alertEngine.ts       — bill due, low cash, drift, goals
+        └── priceServerConfig.ts — VITE_PRICE_SERVER_URL
 ```
 
-- **Holdings** in `App.tsx` use average cost for display; **realized gains** use FIFO in `taxLots.ts` (source of truth for realized column).
-- **Attachments** must stay in IndexedDB — never `localStorage` (5 MB cap).
-- **DRIP toggle** is projection-only; does not create buy transactions.
-- **CGT** is generic only (no AU/US tax rules) per product decision.
+- **Planned** = `generatePlannedEvents()` (recurring templates only).
+- **Actual** = `generateRecurringEvents()` (includes one-offs, overrides, estimated mortgage interest).
+- **CSV import** sets `importId` on `BudgetItem` for dedup; Gemini categorization is optional.
+- **Alerts** computed via `useMemo` in `App.tsx` — avoid `setState` in alert evaluation (causes infinite loops).
 
 ---
 
@@ -101,23 +112,21 @@ Reports: `reports/report.html`, `test-results/` (git-ignored).
 | Topic | Detail |
 | --- | --- |
 | Seeding | `add_init_script` seeds `localStorage` before boot; re-runs on navigation |
-| Import test | Does **not** seed — reload must load imported file as source of truth |
-| Hash routes | `window.location.reload()` preserves `#/settings` |
-| Monte Carlo | Assert deterministic values (pre-tax target), not random probability % |
-| Attachment test | Use `today_iso()` for expense date; image compression falls back in headless |
-| DRIP test | Assert `localStorage` after toggle (seed resets on reload) |
-| Debt planner | Scope liability table via `data-testid="manage-data-table"` to avoid duplicate rows |
+| CSV import test | Assert success message in modal — navigation re-seeds and wipes imports |
+| Variance override test | Override date must match recurring occurrence date (e.g. 1st of month) |
+| FIRE scenario test | Assert deterministic `yearsToFIRE`, not `probabilityOfSuccess` |
+| Alert dismiss test | Toggle bell to close dropdown after dismiss |
 | Mocks | `/prices`, `/history`, `/info`, Gemini API — all intercepted in `conftest.py` |
 
 ---
 
-## 6. New localStorage keys
+## 6. New localStorage keys (Phase 3)
 
 | Key | Purpose |
 | --- | --- |
-| `emergencyFundTargetMonths` | Emergency fund target (default 6) |
-| `dripSettings` | Per-ticker DRIP projection toggles |
-| `portfolioAnalyticsSettings` | Benchmark ticker (`VOO`), period (`1y`/`all`) |
+| `fireScenarios` | Saved FIRE what-if scenarios (max 5) |
+| `alertSettings` | Alert toggles and thresholds |
+| `achievedMilestones` | FIRE milestone percentages already notified |
 
 All included in `services/backupService.ts` `BACKUP_STORAGE_KEYS`.
 
@@ -127,18 +136,10 @@ All included in `services/backupService.ts` `BACKUP_STORAGE_KEYS`.
 
 | Item | Status |
 | --- | --- |
-| Phase 1 | ✅ Committed (`2a4b817`) |
-| Phase 2 | ✅ Implemented, **not yet committed** |
-| E2E suite | ✅ 48 tests passing |
-| Phase 3 (roadmap) | Budget vs actual, CSV import, what-if sandbox, alerts |
-| Phase 5 CI | GitHub Actions for E2E on PRs (recommended parallel work) |
-
-### Suggested immediate follow-ups
-
-1. Commit Phase 2 changes.
-2. Add `data-testid` hooks anywhere chart/icon selectors prove brittle.
-3. Wire directory-sync and reset flows into E2E.
-4. Begin Phase 3 planning (`FEATURE_ROADMAP.md`).
+| Phases 1–3 | ✅ Shipped |
+| E2E suite | ✅ 58 tests passing |
+| Phase 4 (roadmap) | FIRE variants, savings goals, mortgage amortization |
+| Phase 5 CI | GitHub Actions for E2E on PRs (recommended) |
 
 ---
 
@@ -147,8 +148,8 @@ All included in `services/backupService.ts` `BACKUP_STORAGE_KEYS`.
 | File | Purpose |
 | --- | --- |
 | `README.md` | User-facing setup and features |
-| `FEATURE_ROADMAP.md` | Phased feature plan (Phases 1–2 shipped) |
+| `FEATURE_ROADMAP.md` | Phased feature plan (Phases 1–3 shipped) |
 | `CHANGELOG.md` | Version history |
-| `DEVELOPMENT_BLOG.md` | Per-commit narrative with difficulties & resolutions |
+| `DEVELOPMENT_BLOG.md` | Per-commit narrative |
 | `SYSTEM_DESIGN.md` | Architecture spec |
 | `TECHNICAL_TESTING.md` | E2E test guide |

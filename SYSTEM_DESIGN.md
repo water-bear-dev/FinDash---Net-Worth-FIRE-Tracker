@@ -38,9 +38,10 @@ graph TD
 - **Algorithmic Rebalancing Engine**: A pure utility function that computes the exact buy/sell monetary differences needed to align a user's current holdings with a target allocation percentage array.
 - **Monte Carlo FIRE Engine**: A client-side statistical engine that runs thousands of simulated market paths (using Box-Muller normal distributions) over user-defined retirement durations to output a reliable "Probability of Success" for early retirement given specific Safe Withdrawal Rates, inflation, and tax constraints.
 - **Investment Analytics Engine (Phase 2)**: FIFO tax-lot service (`taxLots.ts`) for realized/unrealized gains; XIRR/TWR performance (`portfolioPerformance.ts`); dividend analytics with DRIP projection; diversification aggregation via local price-server `/info`; tax-loss harvesting suggestions.
+- **Cash Flow Engine (Phase 3)**: `budgetVariance.ts` compares planned recurring events (`generatePlannedEvents`) vs actual (`generateRecurringEvents`); `csvImport.ts` for bank statement import with optional Gemini categorization; `fireScenarios.ts` for FIRE what-if sandbox; `alertEngine.ts` for in-app alerts.
 
 ### 3.3 Integration Layer
-- **Market Data**: Local Python price server (`localhost:8001`) via yfinance — endpoints: `/prices`, `/search`, `/history`, `/info`.
+- **Market Data**: Local Python price server (configurable via `VITE_PRICE_SERVER_URL`, default `localhost:8001`) via yfinance — endpoints: `/prices`, `/search`, `/history`, `/info`.
 - **AI Insights**: Integration with Google Gemini for synthesized market outlooks.
 - **Cloud Sync (Planned)**: OAuth2 integration with Google Drive for automated CSV/JSON backups.
 

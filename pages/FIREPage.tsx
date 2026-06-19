@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import Card from '../components/Card';
 import FIRESimulator from '../components/FIRESimulator';
 import HowItWorksModal from '../components/HowItWorksModal';
-import { FireSettings } from '../types';
+import FireScenarioSandbox from '../components/FireScenarioSandbox';
+import { FireScenario, FireSettings } from '../types';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 
 interface FIREPageProps {
@@ -11,10 +12,12 @@ interface FIREPageProps {
     fireSettings: FireSettings;
     setFireSettings: (value: FireSettings | ((val: FireSettings) => FireSettings)) => void;
     setTargetAnnualSpending: (value: number) => void;
+    savedScenarios: FireScenario[];
+    onSaveScenarios: (scenarios: FireScenario[]) => void;
     formatCurrency: (value: number) => string;
 }
 
-const FIREPage: React.FC<FIREPageProps> = ({ netWorth, fireData, fireSettings, setFireSettings, setTargetAnnualSpending, formatCurrency }) => {
+const FIREPage: React.FC<FIREPageProps> = ({ netWorth, fireData, fireSettings, setFireSettings, setTargetAnnualSpending, savedScenarios, onSaveScenarios, formatCurrency }) => {
     const [localSpending, setLocalSpending] = React.useState(fireData.targetAnnualSpending);
     const [isSaved, setIsSaved] = React.useState(false);
     const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
@@ -114,6 +117,18 @@ const FIREPage: React.FC<FIREPageProps> = ({ netWorth, fireData, fireSettings, s
                     monthlySavings={fireData.monthlySavings}
                     fireSettings={fireSettings}
                     setFireSettings={setFireSettings}
+                    formatCurrency={formatCurrency}
+                />
+            </Card>
+
+            <Card title="What-If Scenario Sandbox">
+                <FireScenarioSandbox
+                    netWorth={netWorth}
+                    monthlySavings={fireData.monthlySavings}
+                    targetAnnualSpending={fireData.targetAnnualSpending}
+                    fireSettings={fireSettings}
+                    savedScenarios={savedScenarios}
+                    onSaveScenarios={onSaveScenarios}
                     formatCurrency={formatCurrency}
                 />
             </Card>

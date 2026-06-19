@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, Transaction, BudgetItem } from '../types';
+import { UserProfile, Transaction, BudgetItem, AlertSettings } from '../types';
 import Card from '../components/Card';
+import CsvImportModal from '../components/CsvImportModal';
 import { exportTransactionsToJSON, exportBudgetToJSON } from '../services/exportService';
 import { gatherBackupData, restoreBackupData } from '../services/backupService';
 import { encryptJSON, decryptJSON, isEncryptedBackup } from '../services/cryptoService';
@@ -23,6 +24,10 @@ interface SettingsPageProps {
     saveCurrency: (currency: string) => void;
     useLocalPriceServer: boolean;
     saveUseLocalPriceServer: (enabled: boolean) => void;
+    budgetItems: BudgetItem[];
+    addBudgetItem: (item: Omit<BudgetItem, 'id'>) => void;
+    alertSettings: AlertSettings;
+    saveAlertSettings: (settings: AlertSettings) => void;
 }
 
 const Switch: React.FC<{ enabled: boolean; onChange: (enabled: boolean) => void }> = ({ enabled, onChange }) => (
@@ -47,6 +52,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     saveCurrency,
     useLocalPriceServer,
     saveUseLocalPriceServer,
+    budgetItems,
+    addBudgetItem,
+    alertSettings,
+    saveAlertSettings,
 }) => {
     const [profile, setProfile] = useState<UserProfile>(userProfile);
     const [localPriceServerEnabled, setLocalPriceServerEnabled] = useState(useLocalPriceServer);
@@ -66,6 +75,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [importConfirmModal, setImportConfirmModal] = useState<{ isOpen: boolean; data: any }>({ isOpen: false, data: null });
+    const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
+    const [localAlertSettings, setLocalAlertSettings] = useState(alertSettings);
 
     useEffect(() => { setProfile(userProfile); }, [userProfile]);
     useEffect(() => { setSpending(targetAnnualSpending); }, [targetAnnualSpending]);
@@ -74,6 +85,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     useEffect(() => { setCurrentCurrency(currency); }, [currency]);
     useEffect(() => { setEmergencyMonths(emergencyFundTargetMonths); }, [emergencyFundTargetMonths]);
     useEffect(() => { setLocalPriceServerEnabled(useLocalPriceServer); }, [useLocalPriceServer]);
+    useEffect(() => { setLocalAlertSettings(alertSettings); }, [alertSettings]);
 
     useEffect(() => {
         getDirectoryHandle().then(handle => {
@@ -336,6 +348,32 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                 </form>
             </Card>
 
+            <Card title="Alerts & Notifications">
+                <form onSubmit={(e) => { e.preventDefault(); saveAlertSettings(localAlertSettings); showSuccess('Alert settings saved!'); }} className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-300">Enable alerts</span>
+                        <Switch enabled={localAlertSettings.enabled} onChange={v => setLocalAlertSettings(p => ({ ...p, enabled: v }))} />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Bill due reminder (days before)</label>
+                        <input type="number" value={localAlertSettings.billDueDaysBefore} onChange={e => setLocalAlertSettings(p => ({ ...p, billDueDaysBefore: parseInt(e.target.value) || 3 }))} className={inputClasses} data-testid="bill-due-days" />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Low cash threshold</label>
+                        <input type="number" value={localAlertSettings.lowCashThreshold} onChange={e => setLocalAlertSettings(p => ({ ...p, lowCashThreshold: parseFloat(e.target.value) || 0 }))} className={inputClasses} data-testid="low-cash-threshold" />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Rebalance drift threshold (%)</label>
+                        <input type="number" value={localAlertSettings.rebalanceDriftPercent} onChange={e => setLocalAlertSettings(p => ({ ...p, rebalanceDriftPercent: parseFloat(e.target.value) || 5 }))} className={inputClasses} />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Budget over threshold (%)</label>
+                        <input type="number" value={localAlertSettings.budgetOverPercent} onChange={e => setLocalAlertSettings(p => ({ ...p, budgetOverPercent: parseFloat(e.target.value) || 10 }))} className={inputClasses} />
+                    </div>
+                    <button type="submit" className={btnPrimaryClasses}>Save Alert Settings</button>
+                </form>
+            </Card>
+
             <Card title="Data Backup & Export">
                 <div className="space-y-6 text-sm text-gray-600 dark:text-gray-400">
                     <div>
@@ -343,6 +381,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                         <div className="flex flex-col sm:flex-row gap-4">
                             <button type="button" onClick={handleExportTransactionsJSON} className={btnSecondaryClasses}>Export Transactions</button>
                             <button type="button" onClick={handleExportBudgetJSON} className={btnSecondaryClasses}>Export Budget</button>
+                            <button type="button" onClick={() => setIsCsvImportOpen(true)} className={btnSecondaryClasses} data-testid="settings-import-csv">Import Bank CSV</button>
                         </div>
                     </div>
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -473,6 +512,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                         </div>
                     </div>
                 </div>
+            )}
+
+            {isCsvImportOpen && (
+                <CsvImportModal
+                    budgetItems={budgetItems}
+                    geminiApiKey={geminiApiKey}
+                    addBudgetItem={addBudgetItem}
+                    onClose={() => setIsCsvImportOpen(false)}
+                />
             )}
         </div>
     );
